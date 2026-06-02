@@ -18,4 +18,9 @@ test-results/
 # OS
 .DS_Store
 Thumbs.db
-EOF
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Claude Code internals
+.claude/
