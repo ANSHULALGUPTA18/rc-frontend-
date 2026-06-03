@@ -15,8 +15,8 @@ import {
   type SelectedJdFile,
 } from "@/features/jd-upload/types";
 import { UploadPreviewPanel } from "@/features/jd-upload/components/UploadPreviewPanel";
-import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
+import { AppShell } from "@/components/layout/AppShell";
 
 interface JdUploadViewProps {
   onContinue?: (files: SelectedJdFile[]) => void;
@@ -53,10 +53,7 @@ export function JdUploadView({
   const { files, canContinue, addFiles, removeFile, clear } = useJdUpload();
 
   return (
-    <div className="flex min-h-screen bg-surface-subtle">
-      <WorkshopSidebar />
-
-      <main className="flex-1 px-6 py-8 lg:px-10">
+    <AppShell>
         <header className="space-y-6">
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
           <div className="space-y-3">
@@ -154,7 +151,6 @@ export function JdUploadView({
             onClear={clear}
           />
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

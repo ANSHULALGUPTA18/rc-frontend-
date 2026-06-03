@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import {
   getKpiStats,
@@ -187,10 +187,7 @@ export function DashboardView(): React.ReactElement {
   const { data: reports = [], isLoading: reportsLoading, error: reportsError, refetch: refetchReports } = useQuery({ queryKey: ["reports"], queryFn: getReports });
 
   return (
-    <div className="flex min-h-screen bg-surface-subtle">
-      <WorkshopSidebar />
-
-      <main className="flex-1 px-6 py-8 lg:px-10">
+    <AppShell>
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-ink">Dashboard</h1>
@@ -362,7 +359,6 @@ export function DashboardView(): React.ReactElement {
             </ul>
           </div>
         </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

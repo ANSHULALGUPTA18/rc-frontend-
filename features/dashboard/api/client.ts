@@ -46,13 +46,13 @@ export interface ReportItem {
 // ─── Mock data — delete this block when backend is connected ──────────────────
 
 const MOCK_KPI: KpiStats = {
-  activeRequests: 142,
-  activeRequestsTrend: "+12% vs last month",
-  pendingApprovals: 42,
-  pendingApprovalsTrend: "+12% vs last month",
-  recentPricingReports: 3104,
-  accuracyRate: "98% Accurate",
-  avgMargin: "24.8%",
+  activeRequests: 0,
+  activeRequestsTrend: "+0% vs last month",
+  pendingApprovals: 0,
+  pendingApprovalsTrend: "+0% vs last month",
+  recentPricingReports: 0,
+  accuracyRate: "0% Accurate",
+  avgMargin: "00.0%",
 };
 
 const MOCK_APPROVALS: ApprovalRow[] = [

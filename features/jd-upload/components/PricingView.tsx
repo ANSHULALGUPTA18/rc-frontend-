@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
-import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
+import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPricingRows } from "@/features/jd-upload/api/client";
 import type { PricingRow } from "@/features/jd-upload/api/client";
@@ -97,10 +97,8 @@ export function PricingView({
   });
 
   return (
-    <div className="flex min-h-screen bg-surface-subtle">
-      <WorkshopSidebar />
-
-      <main className="flex flex-1 flex-col px-6 py-8 lg:px-10">
+    <AppShell>
+      <div className="flex flex-1 flex-col">
         <header className="space-y-6">
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
           <div className="space-y-3">
@@ -254,7 +252,7 @@ export function PricingView({
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
