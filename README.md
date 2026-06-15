@@ -4,7 +4,107 @@ Recruiter-facing web application for the RC Pricing Platform — built with Next
 
 ---
 
+## Getting Started
+
+### Prerequisites
+
+| Requirement | Version |
+|---|---|
+| [Node.js](https://nodejs.org/) | 18.18+ (20 LTS recommended) |
+| npm | comes with Node |
+| Git | any recent version |
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/Techgene-Products/rc-pricing-frontend.git
+cd rc-pricing-frontend
+npm install
+```
+
+### 2. Configure environment variables
+
+Copy the example file and edit it:
+
+```bash
+cp .env.example .env.local
+```
+
+`.env.local` is git-ignored — never commit it.
+
+**Easiest setup (no backend, no Azure needed):**
+
+```
+NEXT_PUBLIC_USE_MOCK=true
+NEXT_PUBLIC_API_URL=
+```
+
+With `NEXT_PUBLIC_USE_MOCK=true`, the app runs fully on mock data and the
+login page shows an email/password form. Sign in with:
+
+```
+Email:    admin@techgene.com
+Password: password123
+```
+
+**Connecting to a real backend + Azure AD SSO:**
+
+```
+NEXT_PUBLIC_USE_MOCK=false
+NEXT_PUBLIC_API_URL=https://your-api.example.com
+NEXT_PUBLIC_AZURE_CLIENT_ID=<App Registration client ID>
+NEXT_PUBLIC_AZURE_TENANT_ID=<Techgene tenant ID>
+NEXT_PUBLIC_AZURE_REDIRECT_URI=http://localhost:3000/login
+```
+
+With `NEXT_PUBLIC_USE_MOCK=false`, the login page shows a "Sign in with
+Microsoft" button instead, and all data is fetched from `NEXT_PUBLIC_API_URL`
+(no mock fallback — see [API Layer & Mock Data](#api-layer--mock-data)).
+
+### 3. Run the app
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to
+`/login`. After signing in you land on `/dashboard`.
+
+### Other useful commands
+
+| Command | What it does |
+|---|---|
+| `npm run build` | Production build |
+| `npm run start` | Run the production build (after `npm run build`) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
+| `npm test` | Run unit/component tests (Vitest) |
+| `npm run test:watch` | Run unit tests in watch mode |
+| `npm run test:e2e` | Run end-to-end tests (Playwright) |
+
+---
+
 ## What was built
+
+### 0. Authentication & Global Layout
+
+- **`/login`** — public route. Adapts to `NEXT_PUBLIC_USE_MOCK`:
+  - `true`: email/password form (react-hook-form, show/hide password, Remember me)
+  - `false`: "Sign in with Microsoft" button (Azure AD / Entra ID via MSAL)
+- **Route protection** — `middleware.ts` blocks unauthenticated access to every
+  page except `/login`; `AuthGuard` (used on `/dashboard`, `/jd-upload`,
+  `/prompt-template`) redirects to `/login` if the session is missing
+- **`AuthContext`** (`features/auth/context/AuthContext.tsx`) — single source of
+  truth for the signed-in user (name, email, role) and `logout()`, fed from
+  either localStorage/sessionStorage (mock) or the MSAL account (Azure)
+- **`AppShell` + `TopBar`** (`components/layout/`) — every authenticated page
+  is wrapped in `AppShell`, which renders the sidebar plus a global `TopBar`
+  showing the user's name, avatar initials, and a dropdown with
+  **Profile**, **Settings**, and **Sign out**
+- Session persists across page refresh; signing out clears all stored auth
+  state and returns to `/login`
+
+---
 
 ### 1. Sidebar Navigation
 A collapsible left sidebar used across all screens.
@@ -114,10 +214,17 @@ NEXT_PUBLIC_API_URL=            # set this when backend is ready
 | Folder | Purpose |
 |---|---|
 | `app/` | Next.js routes — thin page files only |
+| `app/login/` | Public login route |
+| `middleware.ts` | Edge middleware — blocks unauthenticated access to protected routes |
 | `features/jd-upload/` | Upload, Prompt Selection, Pricing stages + sidebar + stepper |
 | `features/prompt-template/` | Prompt template grid, modal, hook |
 | `features/dashboard/` | Dashboard view and KPI components |
-| `features/auth/providers/` | TanStack Query `QueryClientProvider` |
+| `features/auth/context/` | `AuthContext` / `AuthProvider` — current user + logout |
+| `features/auth/components/` | `LoginView`, `AuthGuard`, `UserMenu` |
+| `features/auth/hooks/` | Login/logout hooks (mock + Azure) |
+| `features/auth/providers/` | `AppProviders` — MSAL, AuthProvider, TanStack `QueryClientProvider` |
+| `lib/auth/` | `msal.ts` (MSAL config/instance), `storage.ts` (token/user/session storage) |
+| `components/layout/` | `AppShell`, `TopBar` — shared authenticated page layout |
 | `features/*/api/client.ts` | All API functions + mock data |
 | `lib/api/config.ts` | `IS_MOCK` and `API_BASE` env flags |
 | `components/ui/` | Button, Card, FileUpload, LoadingSpinner, ErrorState primitives |
