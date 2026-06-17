@@ -19,11 +19,12 @@ interface StageDefinition {
 
 const STAGE_DEFS: StageDefinition[] = [
   { id: "upload", label: "UPLOAD" },
+  { id: "extraction", label: "Extraction" },
   { id: "prompt-selection", label: "Prompt Selection" },
-  { id: "pricing", label: "Pricing" },
+  { id: "recommendations", label: "Recommendations" },
 ];
 
-const STAGE_ORDER: WorkshopStageId[] = ["upload", "prompt-selection", "pricing"];
+const STAGE_ORDER: WorkshopStageId[] = ["upload", "extraction", "prompt-selection", "recommendations"];
 
 function getStatus(
   id: WorkshopStageId,

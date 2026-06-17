@@ -1,18 +1,15 @@
 /**
  * Dashboard API client.
  *
- * Each exported function follows the same contract:
- *   - When IS_MOCK=true  → returns the MOCK_* constant immediately (no network call).
- *   - When IS_MOCK=false → calls the real REST endpoint; throws on non-2xx so
- *     TanStack Query surfaces an error state — no silent fallback to mock data.
- *
- * To connect the real backend:
- *   1. Set NEXT_PUBLIC_USE_MOCK=false in .env.local
- *   2. Delete every `MOCK_*` constant and `if (IS_MOCK) return MOCK_*` line
- *   3. Confirm the endpoint paths match your backend routes
+ * There is no dedicated /dashboard/* backend API. Pending Approvals and the
+ * KPI cards are derived from GET /v1/review-queue (the same data the JD
+ * Upload -> Recommendations flow produces). Reports has no backend
+ * equivalent and always returns an empty list.
  */
 
-import { IS_MOCK, API_BASE } from "@/lib/api/config";
+import { apiFetch } from "@/lib/api/client";
+import { IS_MOCK } from "@/lib/api/config";
+import type { MsalTokenContext } from "@/lib/auth/token-storage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,10 +25,10 @@ export interface KpiStats {
 
 export interface ApprovalRow {
   id: string;
-  requestId: string;
-  client: string;
-  role: string;
-  proposedRate: string;
+  jdId: string;
+  payRateRange: string;
+  billRateRange: string;
+  markupPct: string;
   aiConfidence: number;
   status: "approved" | "pending";
 }
@@ -41,6 +38,43 @@ export interface ReportItem {
   title: string;
   fileType: string;
   fileSize: string;
+}
+
+// ─── Raw backend response shapes ───────────────────────────────────────────────
+
+interface RawRecommendation {
+  id: string;
+  jd_id: string;
+  pay_rate_low: string;
+  pay_rate_high: string;
+  bill_rate_low: string;
+  bill_rate_high: string;
+  markup_pct: string;
+  confidence_score: number;
+  status: string;
+}
+
+interface ReviewQueueResponse {
+  items: RawRecommendation[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+function fmtRate(raw: string): string {
+  return `$${parseFloat(raw).toFixed(2)}`;
+}
+
+function mapApprovalRow(raw: RawRecommendation): ApprovalRow {
+  return {
+    id: raw.id,
+    jdId: raw.jd_id,
+    payRateRange: `${fmtRate(raw.pay_rate_low)} – ${fmtRate(raw.pay_rate_high)}/hr`,
+    billRateRange: `${fmtRate(raw.bill_rate_low)} – ${fmtRate(raw.bill_rate_high)}/hr`,
+    markupPct: parseFloat(raw.markup_pct).toFixed(1),
+    aiConfidence: Math.round(raw.confidence_score * 100),
+    status: raw.status === "pending" ? "pending" : "approved",
+  };
 }
 
 // ─── Mock data — delete this block when backend is connected ──────────────────
@@ -56,11 +90,11 @@ const MOCK_KPI: KpiStats = {
 };
 
 const MOCK_APPROVALS: ApprovalRow[] = [
-  { id: "1", requestId: "#RQ-8821", client: "Astra Financial", role: "Snr DevOps Engineer", proposedRate: "$145.00/hr", aiConfidence: 94, status: "approved" },
-  { id: "2", requestId: "#RQ-8821", client: "Astra Financial", role: "Snr DevOps Engineer", proposedRate: "$145.00/hr", aiConfidence: 94, status: "pending" },
-  { id: "3", requestId: "#RQ-8821", client: "Astra Financial", role: "Snr DevOps Engineer", proposedRate: "$145.00/hr", aiConfidence: 94, status: "pending" },
-  { id: "4", requestId: "#RQ-8821", client: "Astra Financial", role: "Snr DevOps Engineer", proposedRate: "$145.00/hr", aiConfidence: 94, status: "pending" },
-  { id: "5", requestId: "#RQ-8821", client: "Astra Financial", role: "Snr DevOps Engineer", proposedRate: "$145.00/hr", aiConfidence: 94, status: "pending" },
+  { id: "1", jdId: "jd-8821", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "approved" },
+  { id: "2", jdId: "jd-8822", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending" },
+  { id: "3", jdId: "jd-8823", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending" },
+  { id: "4", jdId: "jd-8824", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending" },
+  { id: "5", jdId: "jd-8825", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending" },
 ];
 
 const MOCK_REPORTS: ReportItem[] = [
@@ -71,23 +105,40 @@ const MOCK_REPORTS: ReportItem[] = [
 
 // ─── API functions ────────────────────────────────────────────────────────────
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
-  return res.json() as Promise<T>;
-}
-
-export async function getKpiStats(): Promise<KpiStats> {
+export async function getKpiStats(msal?: MsalTokenContext): Promise<KpiStats> {
   if (IS_MOCK) return MOCK_KPI;
-  return apiFetch<KpiStats>("/dashboard/kpi");
+
+  const res = await apiFetch<ReviewQueueResponse>("/v1/review-queue?page_size=100", { msal });
+  const items = res.items;
+
+  const pendingApprovals = items.filter((item) => item.status === "pending").length;
+  const completed = items.length - pendingApprovals;
+  const avgConfidence = items.length
+    ? Math.round((items.reduce((sum, item) => sum + item.confidence_score, 0) / items.length) * 100)
+    : 0;
+  const avgMargin = items.length
+    ? items.reduce((sum, item) => sum + Number(item.markup_pct), 0) / items.length
+    : 0;
+
+  return {
+    activeRequests: res.total,
+    activeRequestsTrend: res.total === 1 ? "1 recommendation" : `${res.total} recommendations`,
+    pendingApprovals,
+    pendingApprovalsTrend: pendingApprovals === 1 ? "1 awaiting review" : `${pendingApprovals} awaiting review`,
+    recentPricingReports: completed,
+    accuracyRate: `${avgConfidence}% avg confidence`,
+    avgMargin: `${avgMargin.toFixed(1)}%`,
+  };
 }
 
-export async function getApprovals(): Promise<ApprovalRow[]> {
+export async function getApprovals(msal?: MsalTokenContext): Promise<ApprovalRow[]> {
   if (IS_MOCK) return MOCK_APPROVALS;
-  return apiFetch<ApprovalRow[]>("/dashboard/approvals");
+
+  const res = await apiFetch<ReviewQueueResponse>("/v1/review-queue?page=1&page_size=10", { msal });
+  return res.items.map(mapApprovalRow);
 }
 
 export async function getReports(): Promise<ReportItem[]> {
   if (IS_MOCK) return MOCK_REPORTS;
-  return apiFetch<ReportItem[]>("/dashboard/reports");
+  return [];
 }

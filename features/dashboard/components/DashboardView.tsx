@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
+import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import {
   getKpiStats,
   getApprovals,
@@ -102,15 +104,6 @@ function FileIcon({ type }: { type: string }): React.ReactElement {
   );
 }
 
-function TrendUp(): React.ReactElement {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="h-3 w-3">
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
-  );
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface KpiCardProps {
@@ -132,15 +125,6 @@ function KpiCard({ label, value, icon, subtext }: KpiCardProps): React.ReactElem
       <p className="mt-2 text-3xl font-bold text-ink">{value}</p>
       <div className="mt-1">{subtext}</div>
     </div>
-  );
-}
-
-function TrendBadge({ text }: { text: string }): React.ReactElement {
-  return (
-    <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-      <TrendUp />
-      {text}
-    </span>
   );
 }
 
@@ -182,8 +166,10 @@ function StatusButton({ status }: { status: "approved" | "pending" }): React.Rea
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 export function DashboardView(): React.ReactElement {
-  const { data: kpi, isLoading: kpiLoading, error: kpiError } = useQuery({ queryKey: ["kpi"], queryFn: getKpiStats });
-  const { data: approvals = [], isLoading: approvalsLoading, error: approvalsError, refetch: refetchApprovals } = useQuery({ queryKey: ["approvals"], queryFn: getApprovals });
+  const router = useRouter();
+  const msal = useMsalTokenContext();
+  const { data: kpi, isLoading: kpiLoading, error: kpiError } = useQuery({ queryKey: ["kpi"], queryFn: () => getKpiStats(msal) });
+  const { data: approvals = [], isLoading: approvalsLoading, error: approvalsError, refetch: refetchApprovals } = useQuery({ queryKey: ["approvals"], queryFn: () => getApprovals(msal) });
   const { data: reports = [], isLoading: reportsLoading, error: reportsError, refetch: refetchReports } = useQuery({ queryKey: ["reports"], queryFn: getReports });
 
   return (
@@ -193,10 +179,11 @@ export function DashboardView(): React.ReactElement {
           <h1 className="text-3xl font-bold text-ink">Dashboard</h1>
           <button
             type="button"
+            onClick={() => router.push("/jd/upload")}
             className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             <PlusIcon />
-            Create report
+            New Pricing Request
           </button>
         </div>
 
@@ -209,16 +196,16 @@ export function DashboardView(): React.ReactElement {
             label="Active Requests"
             value={kpi.activeRequests.toLocaleString()}
             icon={<ListIcon />}
-            subtext={<TrendBadge text={kpi.activeRequestsTrend} />}
+            subtext={<AccurateBadge text={kpi.activeRequestsTrend} />}
           />
           <KpiCard
             label="Pending Approvals"
             value={kpi.pendingApprovals.toLocaleString()}
             icon={<ListIcon />}
-            subtext={<TrendBadge text={kpi.pendingApprovalsTrend} />}
+            subtext={<AccurateBadge text={kpi.pendingApprovalsTrend} />}
           />
           <KpiCard
-            label="Recent Pricing Reports"
+            label="Completed"
             value={kpi.recentPricingReports.toLocaleString()}
             icon={<RefreshIcon />}
             subtext={<AccurateBadge text={kpi.accuracyRate} />}
@@ -246,25 +233,34 @@ export function DashboardView(): React.ReactElement {
 
             {approvalsLoading && <LoadingSpinner />}
             {approvalsError && <ErrorState message="Failed to load approvals." onRetry={() => void refetchApprovals()} />}
-            {!approvalsLoading && !approvalsError && (
+            {!approvalsLoading && !approvalsError && approvals.length === 0 && (
+              <div className="px-6 py-10 text-center text-sm text-ink-muted">
+                No pricing requests yet.{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/jd/upload")}
+                  className="font-medium text-sidebar-active hover:underline"
+                >
+                  Upload a JD to get started.
+                </button>
+              </div>
+            )}
+            {!approvalsLoading && !approvalsError && approvals.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line">
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
-                      Request ID
+                      JD ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
-                      Client / Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
-                      Proposed Rate
+                      Pay / Bill Rate
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
                       AI Confidence
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
-                      Action
+                      Status
                     </th>
                   </tr>
                 </thead>
@@ -272,13 +268,13 @@ export function DashboardView(): React.ReactElement {
                   {approvals.map((row) => (
                     <tr key={row.id} className="border-b border-line last:border-0">
                       <td className="px-6 py-4 font-medium text-ink">
-                        {row.requestId}
+                        <span className="block truncate font-mono text-xs text-ink">{row.jdId}</span>
+                        <span className="block text-xs text-ink-muted">Markup {row.markupPct}%</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="block font-medium text-ink">{row.client}</span>
-                        <span className="block text-xs text-ink-muted">{row.role}</span>
+                        <span className="block font-medium text-ink">{row.payRateRange}</span>
+                        <span className="block text-xs text-ink-muted">{row.billRateRange}</span>
                       </td>
-                      <td className="px-6 py-4 text-ink">{row.proposedRate}</td>
                       <td className="px-6 py-4 font-semibold text-sidebar-active">
                         {row.aiConfidence}%
                       </td>
@@ -303,7 +299,9 @@ export function DashboardView(): React.ReactElement {
 
             <div className="flex items-center justify-between border-t border-line px-6 py-3">
               <span className="text-xs text-ink-muted">
-                Showing 1 to 3 of 12 resumes
+                {approvals.length === 0
+                  ? "No results"
+                  : `Showing ${approvals.length} recommendation${approvals.length === 1 ? "" : "s"}`}
               </span>
               <div className="flex items-center gap-1">
                 <button
@@ -335,6 +333,12 @@ export function DashboardView(): React.ReactElement {
             </div>
             {reportsLoading && <LoadingSpinner />}
             {reportsError && <ErrorState message="Failed to load reports." onRetry={() => void refetchReports()} />}
+            {!reportsLoading && !reportsError && reports.length === 0 && (
+              <div className="px-5 py-10 text-center text-sm text-ink-muted">
+                No reports yet.
+              </div>
+            )}
+            {!reportsLoading && !reportsError && reports.length > 0 && (
             <ul className="divide-y divide-line">
               {reports.map((report) => (
                 <li key={report.id} className="flex items-center gap-3 px-5 py-4">
@@ -357,6 +361,7 @@ export function DashboardView(): React.ReactElement {
                 </li>
               ))}
             </ul>
+            )}
           </div>
         </div>
     </AppShell>

@@ -24,7 +24,7 @@ import {
 } from "react";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 import { useRouter } from "next/navigation";
-import { IS_MOCK } from "@/lib/api/config";
+import { AUTH_DISABLED, IS_MOCK } from "@/lib/api/config";
 import { clearAuth, getStoredUser, type StoredUser } from "@/lib/auth/storage";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,6 +65,9 @@ export function AuthProvider({
 
   /** Derive user from the right source depending on mode */
   const user: AuthUser | null = useMemo(() => {
+    if (AUTH_DISABLED) {
+      return { name: "Dev User", email: "dev@rc-pricing.local" };
+    }
     if (IS_MOCK) {
       const stored: StoredUser | null = getStoredUser();
       if (!stored) return null;
@@ -79,7 +82,7 @@ export function AuthProvider({
     };
   }, [accounts]);
 
-  const isAuthenticated = IS_MOCK ? Boolean(user) : isAzureAuthenticated;
+  const isAuthenticated = AUTH_DISABLED ? true : IS_MOCK ? Boolean(user) : isAzureAuthenticated;
 
   const logout = useCallback((): void => {
     clearAuth();

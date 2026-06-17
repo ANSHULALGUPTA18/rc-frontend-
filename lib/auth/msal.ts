@@ -24,7 +24,10 @@ import {
   PublicClientApplication,
   type Configuration,
   type RedirectRequest,
+  type SilentRequest,
 } from "@azure/msal-browser";
+
+import { BACKEND_API_SCOPE } from "@/lib/api/config";
 
 // ─── MSAL application configuration ──────────────────────────────────────────
 
@@ -85,6 +88,19 @@ export const msalConfig: Configuration = {
  */
 export const loginRequest: RedirectRequest = {
   scopes: ["openid", "profile", "email", "User.Read"],
+};
+
+// ─── RC Pricing backend API scope ──────────────────────────────────────────────
+
+/**
+ * Scope(s) requested when acquiring a token to call the RC Pricing backend.
+ *
+ * NEXT_PUBLIC_AZURE_API_SCOPE is empty until the backend's Azure App
+ * Registration exists — `scopes` is then `[]`, which token-storage.ts
+ * treats as "no backend token to acquire" rather than calling MSAL.
+ */
+export const apiTokenRequest: SilentRequest = {
+  scopes: BACKEND_API_SCOPE ? [BACKEND_API_SCOPE] : [],
 };
 
 // ─── Instance factory ─────────────────────────────────────────────────────────

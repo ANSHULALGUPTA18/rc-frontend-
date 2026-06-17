@@ -9,7 +9,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
-import type { SelectedJdFile } from "@/features/jd-upload/types";
+import type { ResolvedPromptConfig, SelectedJdFile } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   {
@@ -112,7 +112,8 @@ function ChevronDownIcon(): React.ReactElement {
 interface PromptSelectionViewProps {
   files: SelectedJdFile[];
   onBack: () => void;
-  onContinue: () => void;
+  /** Called with a config entry per fileId when the recruiter clicks Continue. */
+  onContinue: (configs: Record<string, ResolvedPromptConfig>) => void;
 }
 
 export function PromptSelectionView({
@@ -256,6 +257,7 @@ export function PromptSelectionView({
                 {cfg.promptMode === "default" ? (
                   <div className="space-y-4">
                     {/* Prompt Template dropdown */}
+                    {promptsLoading && <LoadingSpinner />}
                     {promptsError && <ErrorState message="Failed to load prompt templates." />}
                     <div className="space-y-1.5">
                       <label className="block text-sm font-medium text-ink">
@@ -375,8 +377,24 @@ export function PromptSelectionView({
               </div>
 
               <div className="mt-auto">
-                <Button size="lg" onClick={onContinue}>
-                  Continue to Pricing →
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    const resolved: Record<string, ResolvedPromptConfig> = {};
+                    for (const f of files) {
+                      const cfg = configs[f.id] ?? defaultConfig();
+                      const tpl = promptOptions.find((t) => t.id === cfg.promptTemplateId) ?? promptOptions[0];
+                      resolved[f.id] = {
+                        promptTemplateId: cfg.promptMode === "default" ? cfg.promptTemplateId : null,
+                        promptContent: cfg.promptMode === "custom" ? cfg.customContent : (tpl?.content ?? ""),
+                        locationOverride: cfg.location.trim() || null,
+                        sectorOverride: cfg.sector.trim() || null,
+                      };
+                    }
+                    onContinue(resolved);
+                  }}
+                >
+                  Continue to Recommendations →
                 </Button>
               </div>
             </div>

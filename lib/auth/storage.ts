@@ -46,6 +46,7 @@ export function setUser(user: StoredUser, rememberMe: boolean): void {
 }
 
 export function getStoredUser(): StoredUser | null {
+  if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY);
   if (!raw) return null;
   try {

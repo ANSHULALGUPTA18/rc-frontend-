@@ -20,7 +20,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMsal } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
-import { IS_MOCK } from "@/lib/api/config";
+import { AUTH_DISABLED, IS_MOCK } from "@/lib/api/config";
 import { clearAuth } from "@/lib/auth/storage";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { LoadingSpinner } from "@/components/ui/query-states";
@@ -34,18 +34,23 @@ export function AuthGuard({ children }: AuthGuardProps): React.ReactElement | nu
   const { inProgress } = useMsal();
   const { isAuthenticated } = useAuth();
 
+  // Auth kill-switch — render immediately, skip all checks
+  const skipAuth = AUTH_DISABLED;
+
   // MSAL reads its token cache from localStorage asynchronously on startup.
   // Wait until it finishes before treating !isAuthenticated as "not logged in".
-  const isMsalBusy = !IS_MOCK && inProgress !== InteractionStatus.None;
+  const isMsalBusy = !skipAuth && !IS_MOCK && inProgress !== InteractionStatus.None;
 
   useEffect(() => {
+    if (skipAuth) return;
     if (isMsalBusy) return;
     if (!isAuthenticated) {
       clearAuth(); // remove stale cookie so middleware doesn't loop
       router.replace("/login");
     }
-  }, [isMsalBusy, isAuthenticated, router]);
+  }, [skipAuth, isMsalBusy, isAuthenticated, router]);
 
+  if (skipAuth) return <>{children}</>;
   if (isMsalBusy) return <LoadingSpinner />;
   if (!isAuthenticated) return null;
   return <>{children}</>;

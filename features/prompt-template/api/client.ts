@@ -1,16 +1,20 @@
 /**
- * Prompt Template API client — CRUD operations for AI instruction sets.
+ * Prompt Template API client — local-only template list.
  *
- * createPromptTemplate in mock mode returns a new object with a random UUID so
- * optimistic UI works immediately. The real endpoint should return the
- * persisted object with a server-assigned ID.
+ * The real backend's only prompt-related endpoint is the admin-gated
+ * PUT /v1/admin/prompts/{name}/{version} (a single-version upsert with no
+ * list/get/delete). There is no way to build a real "manage templates" screen
+ * against that without new backend admin endpoints, which are out of scope.
  *
- * setDefaultPromptTemplate and deletePromptTemplate are fire-and-forget in mock
- * mode (no-op). In production they must succeed before the UI reflects the
- * change — replace the void calls in usePromptTemplates with useMutation.
+ * This client therefore always operates on local/canned data, independent of
+ * NEXT_PUBLIC_USE_MOCK — the screen stays usable (add/remove/set-default via
+ * the local-shadow-state pattern in usePromptTemplates), just not persisted.
+ *
+ * createPromptTemplate returns a new object with a random UUID so optimistic
+ * UI works immediately. setDefaultPromptTemplate and deletePromptTemplate are
+ * no-ops since there is nothing to persist to.
  */
 
-import { IS_MOCK, API_BASE } from "@/lib/api/config";
 import type { PromptTemplate } from "@/features/prompt-template/types";
 
 // ─── Mock data — delete this block when backend is connected ──────────────────
@@ -44,37 +48,21 @@ export const MOCK_TEMPLATES: PromptTemplate[] = [
 
 // ─── API functions ────────────────────────────────────────────────────────────
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init);
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
-  return res.json() as Promise<T>;
-}
-
 export async function getPromptTemplates(): Promise<PromptTemplate[]> {
-  if (IS_MOCK) return MOCK_TEMPLATES;
-  return apiFetch<PromptTemplate[]>("/prompt-templates");
+  return MOCK_TEMPLATES;
 }
 
 export async function createPromptTemplate(
   name: string,
   content: string,
 ): Promise<PromptTemplate> {
-  if (IS_MOCK) {
-    return { id: crypto.randomUUID(), name, content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
-  }
-  return apiFetch<PromptTemplate>("/prompt-templates", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, content }),
-  });
+  return { id: crypto.randomUUID(), name, content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
 }
 
-export async function deletePromptTemplate(id: string): Promise<void> {
-  if (IS_MOCK) return;
-  await apiFetch<void>(`/prompt-templates/${id}`, { method: "DELETE" });
+export async function deletePromptTemplate(_id: string): Promise<void> {
+  return;
 }
 
-export async function setDefaultPromptTemplate(id: string): Promise<void> {
-  if (IS_MOCK) return;
-  await apiFetch<void>(`/prompt-templates/${id}/set-default`, { method: "PATCH" });
+export async function setDefaultPromptTemplate(_id: string): Promise<void> {
+  return;
 }

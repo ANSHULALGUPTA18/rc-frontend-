@@ -20,9 +20,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const AUTH_DISABLED = process.env.NEXT_PUBLIC_AUTH_DISABLED === "true";
 const PUBLIC_PATHS = ["/login"];
 
 export function middleware(request: NextRequest): NextResponse {
+  // Auth kill-switch — skip all auth checks, auto-set session cookie
+  if (AUTH_DISABLED) {
+    const res = NextResponse.next();
+    if (!request.cookies.has("rc_session")) {
+      res.cookies.set("rc_session", "1", { path: "/", sameSite: "strict", maxAge: 28800 });
+    }
+    // Redirect /login → /dashboard when auth is off (nothing to log into)
+    if (request.nextUrl.pathname === "/login") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return res;
+  }
+
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   const hasSession = request.cookies.has("rc_session");
