@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +18,7 @@ import {
 import { UploadPreviewPanel } from "@/features/jd-upload/components/UploadPreviewPanel";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
 import { AppShell } from "@/components/layout/AppShell";
+import { cn } from "@/lib/utils/cn";
 
 interface JdUploadViewProps {
   onContinue?: (files: SelectedJdFile[]) => void;
@@ -47,10 +49,54 @@ function DocumentIcon(): React.ReactElement {
   );
 }
 
+type InputTab = "file" | "paste";
+
+function textToFile(text: string, index: number): File {
+  const blob = new Blob([text], { type: "text/plain" });
+  return new File([blob], `pasted-jd-${index}.txt`, { type: "text/plain" });
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors",
+        active
+          ? "border-sidebar-active text-sidebar-active bg-surface"
+          : "border-transparent text-ink-muted hover:text-ink hover:border-line",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function JdUploadView({
   onContinue,
 }: JdUploadViewProps): React.ReactElement {
   const { files, canContinue, addFiles, removeFile, clear } = useJdUpload();
+  const [activeTab, setActiveTab] = useState<InputTab>("file");
+  const [pastedText, setPastedText] = useState("");
+  const [pasteCount, setPasteCount] = useState(0);
+
+  const handleAddPastedText = useCallback(() => {
+    const trimmed = pastedText.trim();
+    if (!trimmed) return;
+    const file = textToFile(trimmed, pasteCount + 1);
+    addFiles([file]);
+    setPastedText("");
+    setPasteCount((c) => c + 1);
+  }, [pastedText, pasteCount, addFiles]);
 
   return (
     <AppShell>
@@ -66,21 +112,62 @@ export function JdUploadView({
           <div className="flex flex-col gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Upload Multiple Document</CardTitle>
+                <CardTitle>Add Job Descriptions</CardTitle>
                 <CardDescription>
-                  Select multiple PDF, DOCX, or TXT files. Our AI will analyze
-                  each role independently.
+                  Upload files or paste JD text from LinkedIn, job boards, or
+                  emails. Our AI will analyze each role independently.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FileUpload
-                  multiple
-                  accept={ACCEPTED_JD_MIME}
-                  title="Click or drag & drop multiple files"
-                  hint="Supports PDF, DOCX, TXT — Max 10MB each"
-                  onFilesSelected={addFiles}
-                />
+                {/* Tab switcher */}
+                <div className="flex gap-1 border-b border-line">
+                  <TabButton active={activeTab === "file"} onClick={() => setActiveTab("file")}>
+                    Upload Files
+                  </TabButton>
+                  <TabButton active={activeTab === "paste"} onClick={() => setActiveTab("paste")}>
+                    Paste JD Text
+                  </TabButton>
+                </div>
 
+                {/* File upload tab */}
+                {activeTab === "file" && (
+                  <FileUpload
+                    multiple
+                    accept={ACCEPTED_JD_MIME}
+                    title="Click or drag & drop multiple files"
+                    hint="Supports PDF, DOCX, TXT — Max 10MB each"
+                    onFilesSelected={addFiles}
+                  />
+                )}
+
+                {/* Paste text tab */}
+                {activeTab === "paste" && (
+                  <div className="space-y-3">
+                    <textarea
+                      value={pastedText}
+                      onChange={(e) => setPastedText(e.target.value)}
+                      placeholder={"Paste JD text here...\n\nCopy the full job description from LinkedIn, Indeed, or any job board and paste it here."}
+                      rows={10}
+                      className="w-full rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active resize-y"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-ink-subtle">
+                        {pastedText.trim().length > 0
+                          ? `${pastedText.trim().length.toLocaleString()} characters`
+                          : "Paste or type JD content"}
+                      </span>
+                      <Button
+                        size="sm"
+                        disabled={pastedText.trim().length === 0}
+                        onClick={handleAddPastedText}
+                      >
+                        Add to Queue
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* File list (shown for both tabs) */}
                 {files.length > 0 && (
                   <ul className="space-y-2">
                     {files.map((entry) => (

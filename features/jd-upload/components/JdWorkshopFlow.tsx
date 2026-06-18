@@ -41,9 +41,12 @@ export function JdWorkshopFlow(): React.ReactElement {
   // Prompt configs resolved at the Prompt Selection stage (keyed by fileId)
   const [promptConfigs, setPromptConfigs] = useState<Record<string, ResolvedPromptConfig>>({});
 
+  const [extracting, setExtracting] = useState(false);
+
   const handleUploadContinue = async (selectedFiles: SelectedJdFile[]): Promise<void> => {
     setFiles(selectedFiles);
-    setStage("submitting");
+    setStage("extraction");
+    setExtracting(true);
     setSubmitError(null);
 
     try {
@@ -59,27 +62,15 @@ export function JdWorkshopFlow(): React.ReactElement {
         }),
       );
       setSubmittedJds(results);
-      setStage("extraction");
+      setExtracting(false);
     } catch (err) {
       setSubmitError(
         err instanceof Error ? err.message : "Failed to upload job descriptions. Please try again.",
       );
+      setExtracting(false);
       setStage("upload");
     }
   };
-
-  if (stage === "submitting") {
-    return (
-      <AppShell>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-line border-t-sidebar" />
-          <p className="text-sm font-medium text-ink-muted">
-            Uploading and extracting job description fields…
-          </p>
-        </div>
-      </AppShell>
-    );
-  }
 
   if (stage === "recommendations") {
     return (
@@ -95,6 +86,7 @@ export function JdWorkshopFlow(): React.ReactElement {
     return (
       <PromptSelectionView
         files={files}
+        submittedJds={submittedJds}
         onBack={() => setStage("extraction")}
         onContinue={(configs) => {
           setPromptConfigs(configs);
@@ -108,7 +100,9 @@ export function JdWorkshopFlow(): React.ReactElement {
     return (
       <ExtractionView
         submittedJds={submittedJds}
-        onBack={() => setStage("upload")}
+        loading={extracting}
+        fileNames={files.map((f) => f.file.name)}
+        onBack={() => { if (!extracting) setStage("upload"); }}
         onContinue={() => setStage("prompt-selection")}
       />
     );

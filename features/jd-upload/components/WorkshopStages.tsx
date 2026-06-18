@@ -57,7 +57,7 @@ function CheckIcon(): React.ReactElement {
 function StageDot({
   status,
 }: {
-  status: "complete" | "active" | "upcoming";
+  status: "complete" | "active" | "upcoming" | "loading";
 }): React.ReactElement {
   if (status === "complete") {
     return (
@@ -66,7 +66,8 @@ function StageDot({
       </span>
     );
   }
-  if (status === "active") {
+  if (status === "active" || status === "loading") {
+    const isLoading = status === "loading";
     return (
       <svg
         viewBox="0 0 24 24"
@@ -74,10 +75,10 @@ function StageDot({
         stroke="currentColor"
         strokeWidth="2"
         aria-hidden="true"
-        className="h-5 w-5 text-brand"
+        className={cn("h-5 w-5 text-brand", isLoading && "animate-spin")}
       >
         <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
-        <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+        {!isLoading && <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />}
       </svg>
     );
   }
@@ -90,20 +91,23 @@ function StageDot({
 
 interface WorkshopStagesProps {
   activeStage?: WorkshopActiveStage;
+  loading?: boolean;
 }
 
 export function WorkshopStages({
   activeStage = "upload",
+  loading = false,
 }: WorkshopStagesProps): React.ReactElement {
   return (
     <ol className="flex items-center" aria-label="Workshop stages">
       {STAGE_DEFS.map((stage, index) => {
-        const status = getStatus(stage.id, activeStage);
+        let status: "complete" | "active" | "upcoming" | "loading" = getStatus(stage.id, activeStage);
+        if (loading && status === "active") status = "loading";
         const isLast = index === STAGE_DEFS.length - 1;
         const nextStatus =
           !isLast ? getStatus(STAGE_DEFS[index + 1].id, activeStage) : null;
         const connectorDark =
-          status === "complete" || nextStatus === "active";
+          status === "complete" || status === "loading" || nextStatus === "active";
 
         return (
           <li
@@ -114,7 +118,7 @@ export function WorkshopStages({
               aria-current={status === "active" ? "step" : undefined}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border bg-surface px-4 py-3",
-                status === "active"
+                status === "active" || status === "loading"
                   ? "border-brand"
                   : status === "complete"
                     ? "border-sidebar"
@@ -125,7 +129,7 @@ export function WorkshopStages({
               <span
                 className={cn(
                   "text-sm font-semibold",
-                  status === "active"
+                  status === "active" || status === "loading"
                     ? "uppercase tracking-wide text-brand"
                     : status === "complete"
                       ? "text-sidebar"

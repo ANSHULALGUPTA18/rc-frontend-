@@ -69,12 +69,42 @@ function stripExtension(name: string): string {
 
 interface ExtractionViewProps {
   submittedJds: SubmittedJd[];
+  loading?: boolean;
+  fileNames?: string[];
   onBack: () => void;
   onContinue: () => void;
 }
 
+function SkeletonLine({ width = "w-48" }: { width?: string }): React.ReactElement {
+  return <div className={cn("h-4 animate-pulse rounded bg-surface-muted", width)} />;
+}
+
+function ExtractionSkeleton(): React.ReactElement {
+  return (
+    <div className="rounded-card border border-line bg-surface p-6 shadow-card space-y-5">
+      <div className="h-4 w-56 animate-pulse rounded bg-surface-muted" />
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex items-start gap-4 py-3 border-b border-line last:border-0">
+          <SkeletonLine width="w-32" />
+          <SkeletonLine width="w-64" />
+        </div>
+      ))}
+      <div className="mt-4 space-y-2">
+        <SkeletonLine width="w-24" />
+        <div className="flex flex-wrap gap-1.5">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="h-6 w-16 animate-pulse rounded-full bg-surface-muted" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ExtractionView({
   submittedJds,
+  loading = false,
+  fileNames = [],
   onBack,
   onContinue,
 }: ExtractionViewProps): React.ReactElement {
@@ -90,7 +120,7 @@ export function ExtractionView({
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
           <div className="space-y-3">
             <h2 className="text-lg font-bold text-ink">Stages</h2>
-            <WorkshopStages activeStage="extraction" />
+            <WorkshopStages activeStage="extraction" loading={loading} />
           </div>
         </header>
 
@@ -99,9 +129,32 @@ export function ExtractionView({
           <div className="flex w-72 shrink-0 flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Queue ({submittedJds.length})
+                Queue ({loading ? fileNames.length : submittedJds.length})
               </span>
             </div>
+
+            {/* Show file names as placeholders while loading */}
+            {loading && fileNames.length > 0 && (
+              <ul className="space-y-3">
+                {fileNames.map((name, i) => (
+                  <li key={i}>
+                    <div className="w-full rounded-card border border-l-4 border-sidebar-active bg-surface px-4 py-4 shadow-card">
+                      <span className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                          <DocumentIcon />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-sidebar-active">
+                            {stripExtension(name)}
+                          </span>
+                          <span className="block text-xs text-ink-subtle">Extracting...</span>
+                        </span>
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <ul className="space-y-3">
               {submittedJds.map((jd) => {
@@ -149,8 +202,21 @@ export function ExtractionView({
             </div>
           </div>
 
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="flex flex-1 flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <div className="h-7 w-64 animate-pulse rounded bg-surface-muted" />
+              </div>
+              <ExtractionSkeleton />
+              <p className="text-sm text-ink-muted animate-pulse">
+                Extracting fields with AI... this takes a few seconds
+              </p>
+            </div>
+          )}
+
           {/* Extraction panel */}
-          {selected && fields ? (
+          {!loading && selected && fields ? (
             <div className="flex flex-1 flex-col gap-6 overflow-y-auto">
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold text-sidebar">

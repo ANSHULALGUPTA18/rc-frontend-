@@ -9,7 +9,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
-import type { ResolvedPromptConfig, SelectedJdFile } from "@/features/jd-upload/types";
+import type { ResolvedPromptConfig, SelectedJdFile, SubmittedJd } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   {
@@ -111,6 +111,7 @@ function ChevronDownIcon(): React.ReactElement {
 
 interface PromptSelectionViewProps {
   files: SelectedJdFile[];
+  submittedJds?: SubmittedJd[];
   onBack: () => void;
   /** Called with a config entry per fileId when the recruiter clicks Continue. */
   onContinue: (configs: Record<string, ResolvedPromptConfig>) => void;
@@ -118,12 +119,31 @@ interface PromptSelectionViewProps {
 
 export function PromptSelectionView({
   files,
+  submittedJds = [],
   onBack,
   onContinue,
 }: PromptSelectionViewProps): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string>(files[0]?.id ?? "");
+
+  // Build a lookup: fileId → extracted fields
+  const extractedByFileId = Object.fromEntries(
+    submittedJds.map((jd) => [jd.fileId, jd.extractedFields]),
+  );
+
   const [configs, setConfigs] = useState<Record<string, FileConfig>>(() =>
-    Object.fromEntries(files.map((f) => [f.id, defaultConfig()])),
+    Object.fromEntries(
+      files.map((f) => {
+        const extracted = extractedByFileId[f.id];
+        return [
+          f.id,
+          {
+            ...defaultConfig(),
+            location: extracted?.location ?? "",
+            sector: extracted?.sector ?? "",
+          },
+        ];
+      }),
+    ),
   );
 
   const {
