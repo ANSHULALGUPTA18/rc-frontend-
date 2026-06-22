@@ -1,30 +1,61 @@
 name: hotfix-backport
 
-# When a hotfix merges to main, auto-open backport PRs to staging and develop
-# so the fix is never lost. Pure GitHub — no Azure needed.
+# When a hotfix merges to main, cherry-pick that specific commit onto staging and
+# develop and open backport PRs — so the fix (not the whole diverged branch) is ported.
+#
+# Requires the GitHub CLI (gh) on the self-hosted runner, and the repo setting
+# "Allow GitHub Actions to create and approve pull requests" enabled.
 on:
   push:
     branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   backport:
     if: contains(github.event.head_commit.message, 'hotfix')
     runs-on: [self-hosted, rcp-frontend]
-    permissions:
-      contents: read
-      pull-requests: write
     strategy:
+      fail-fast: false
       matrix:
         target: [staging, develop]
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SHA: ${{ github.sha }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Open backport PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cherry-pick hotfix onto ${{ matrix.target }}
         run: |
-          gh pr create --base ${{ matrix.target }} --head main \
-            --title "backport: hotfix to ${{ matrix.target }}" \
-            --body "Automated backport of a hotfix merged to main." || \
-          echo "Backport PR to ${{ matrix.target }} may already exist."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="backport/hotfix-${SHA:0:8}-${{ matrix.target }}"
+          git checkout -b "$BRANCH" "origin/${{ matrix.target }}"
+
+          # Use -m 1 for merge commits (two parents); plain cherry-pick for squashed commits.
+          if git rev-parse "${SHA}^2" >/dev/null 2>&1; then
+            PICK_ARGS="-m 1 $SHA"
+          else
+            PICK_ARGS="$SHA"
+          fi
+
+          if git cherry-pick -x $PICK_ARGS; then
+            git push origin "$BRANCH"
+            gh pr create --base "${{ matrix.target }}" --head "$BRANCH" \
+              --title "backport: hotfix ${SHA:0:8} to ${{ matrix.target }}" \
+              --body "Automated cherry-pick of hotfix ${SHA} from main."
+          else
+            git cherry-pick --abort || true
+            MSG="⚠️ Hotfix backport to ${{ matrix.target }} has conflicts — manual cherry-pick of ${SHA:0:8} needed"
+            echo "$MSG"
+            if [ -n "$TEAMS_WEBHOOK_URL" ]; then
+              curl -s -H 'Content-Type: application/json' \
+                -d "{\"text\":\"$MSG\"}" "$TEAMS_WEBHOOK_URL"
+            fi
+            exit 1
+          fi

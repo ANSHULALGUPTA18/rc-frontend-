@@ -54,23 +54,26 @@ jobs:
         run: echo "TAG=${ENV}-${GITHUB_SHA::8}" >> "$GITHUB_ENV"
 
       - name: Build & push image (per-env NEXT_PUBLIC_* baked in)
+        env:
+          DOCKER_BUILDKIT: "1" # enables the Dockerfile cache mounts without needing a buildx builder
         run: |
-          docker buildx build \
+          docker build \
             --build-arg NEXT_PUBLIC_USE_MOCK="${{ vars.NEXT_PUBLIC_USE_MOCK || 'true' }}" \
             --build-arg NEXT_PUBLIC_API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}" \
             --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_AZURE_CLIENT_ID }}" \
             --build-arg NEXT_PUBLIC_AZURE_TENANT_ID="${{ secrets.NEXT_PUBLIC_AZURE_TENANT_ID }}" \
             --build-arg NEXT_PUBLIC_AZURE_REDIRECT_URI="${{ secrets.NEXT_PUBLIC_AZURE_REDIRECT_URI }}" \
             --build-arg NEXT_PUBLIC_AZURE_API_SCOPE="${{ secrets.NEXT_PUBLIC_AZURE_API_SCOPE }}" \
-            -t "$IMAGE:$TAG" -t "$IMAGE:$ENV-latest" \
-            --push .
+            -t "$IMAGE:$TAG" -t "$IMAGE:$ENV-latest" .
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:$ENV-latest"
 
-      - name: Capture current active revision (for rollback)
+      - name: Capture current image (for rollback)
         run: |
-          PREV=$(az containerapp revision list -n "$APP" -g "$RG" \
-            --query "[?properties.active].name | [0]" -o tsv || true)
-          echo "PREV=$PREV" >> "$GITHUB_ENV"
-          echo "Current active revision: ${PREV:-none}"
+          PREV_IMAGE=$(az containerapp show -n "$APP" -g "$RG" \
+            --query "properties.template.containers[0].image" -o tsv 2>/dev/null || true)
+          echo "PREV_IMAGE=$PREV_IMAGE" >> "$GITHUB_ENV"
+          echo "Current image: ${PREV_IMAGE:-none (first deploy)}"
 
       - name: Deploy new revision
         run: |
@@ -92,11 +95,10 @@ jobs:
           echo "Smoke test failed"; exit 1
 
       - name: Auto-rollback on failure
-        if: failure() && env.PREV != ''
+        if: failure() && env.PREV_IMAGE != ''
         run: |
-          echo "Rolling back $APP to $PREV"
-          az containerapp ingress traffic set -n "$APP" -g "$RG" \
-            --revision-weight "$PREV=100"
+          echo "Rolling back $APP to previous image $PREV_IMAGE"
+          az containerapp update -n "$APP" -g "$RG" --image "$PREV_IMAGE"
 
       - name: Notify Teams
         if: always() && env.TEAMS_WEBHOOK_URL != ''

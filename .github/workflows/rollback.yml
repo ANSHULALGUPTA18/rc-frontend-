@@ -1,9 +1,9 @@
 name: rollback
 
-# Manually roll a frontend Container App back to a previous revision (one-click MTTR).
+# Manually roll a frontend Container App back by redeploying a previous image tag.
+# Image-based so it works regardless of single- vs multiple-revision mode.
 #
-# DORMANT until Azure secrets exist (AZURE_CREDENTIALS, AZURE_RESOURCE_GROUP).
-# To find a revision name: az containerapp revision list -n ca-rcp-frontend-<env> -g <rg> -o table
+# DORMANT until Azure is wired up (set repo variable AZURE_ENABLED=true).
 
 on:
   workflow_dispatch:
@@ -13,8 +13,8 @@ on:
         type: choice
         options: [dev, staging, prod]
         required: true
-      revision:
-        description: Revision name to make 100% active (leave blank to list revisions)
+      image_tag:
+        description: Image tag to redeploy (leave blank to list recent tags)
         required: false
         default: ""
 
@@ -23,12 +23,15 @@ permissions:
 
 jobs:
   rollback:
+    if: vars.AZURE_ENABLED == 'true'
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 10
     environment: ${{ inputs.environment }}
     env:
       APP: ca-rcp-frontend-${{ inputs.environment }}
       RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/rc-pricing-frontend
+      ACR_NAME: ${{ secrets.ACR_NAME }}
       TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
     steps:
       - name: Azure login
@@ -36,25 +39,23 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: List revisions (when no target given)
-        if: ${{ inputs.revision == '' }}
+      - name: List recent image tags (when no tag given)
+        if: inputs.image_tag == ''
         run: |
-          echo "Available revisions for $APP:"
-          az containerapp revision list -n "$APP" -g "$RG" \
-            --query "[].{name:name, active:properties.active, created:properties.createdTime, image:properties.template.containers[0].image}" \
-            -o table
-          echo "Re-run this workflow with the chosen revision name."
+          echo "Recent tags for rc-pricing-frontend:"
+          az acr repository show-tags -n "$ACR_NAME" --repository rc-pricing-frontend \
+            --orderby time_desc --top 20 -o table
+          echo "Re-run this workflow with the chosen image_tag."
 
-      - name: Activate target revision
-        if: ${{ inputs.revision != '' }}
+      - name: Redeploy chosen image
+        if: inputs.image_tag != ''
         run: |
-          echo "Routing 100% traffic to ${{ inputs.revision }}"
-          az containerapp ingress traffic set -n "$APP" -g "$RG" \
-            --revision-weight "${{ inputs.revision }}=100"
+          echo "Redeploying $IMAGE:${{ inputs.image_tag }} to $APP"
+          az containerapp update -n "$APP" -g "$RG" --image "$IMAGE:${{ inputs.image_tag }}"
 
       - name: Notify Teams
-        if: inputs.revision != '' && env.TEAMS_WEBHOOK_URL != ''
+        if: inputs.image_tag != '' && env.TEAMS_WEBHOOK_URL != ''
         run: |
           curl -s -H 'Content-Type: application/json' \
-            -d "{\"text\":\"⏪ Frontend ${{ inputs.environment }} rolled back to ${{ inputs.revision }} by ${{ github.actor }}\"}" \
+            -d "{\"text\":\"⏪ Frontend ${{ inputs.environment }} rolled back to ${{ inputs.image_tag }} by ${{ github.actor }}\"}" \
             "$TEAMS_WEBHOOK_URL"
