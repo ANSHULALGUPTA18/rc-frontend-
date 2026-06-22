@@ -27,6 +27,8 @@ permissions:
 
 jobs:
   deploy:
+    # Skips entirely until Azure is wired up. Set repo variable AZURE_ENABLED=true to activate.
+    if: vars.AZURE_ENABLED == 'true'
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 30
     # Resolves per-environment secrets/vars from the matching GitHub Environment.
