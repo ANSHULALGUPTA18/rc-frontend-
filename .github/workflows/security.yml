@@ -38,16 +38,21 @@ jobs:
           echo "## npm audit (high+)" >> "$GITHUB_STEP_SUMMARY"
           npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
 
+      # Run Trivy via its Docker image rather than trivy-action: the action's
+      # pinned setup-trivy transitive dependency has broken tags. The image is
+      # self-contained and version-pinned; the named volume persists the vuln DB.
       - name: Trivy filesystem/dependency scan
-        uses: aquasecurity/trivy-action@v0.30.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL,HIGH
-          # Report-only at first; flip exit-code to "1" once the baseline is clean.
-          exit-code: "0"
-          ignore-unfixed: true
-          cache-dir: /home/github-runner/.cache/trivy
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            -v trivy-cache:/root/.cache/trivy \
+            aquasec/trivy:0.71.2 fs \
+            --scanners vuln \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --no-progress \
+            --exit-code 0 \
+            /repo
 
       - name: Notify Teams on failure
         if: failure() && env.TEAMS_WEBHOOK_URL != ''
