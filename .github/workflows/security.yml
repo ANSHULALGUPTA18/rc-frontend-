@@ -30,7 +30,7 @@ jobs:
       - name: Secret scan (Gitleaks)
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" \
-            ghcr.io/gitleaks/gitleaks:v8.18.4 detect \
+            ghcr.io/gitleaks/gitleaks:v8.28.0 detect \
             --source=/repo --redact --no-banner --verbose
 
       - name: Dependency audit (report only)
@@ -39,7 +39,7 @@ jobs:
           npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
 
       - name: Trivy filesystem/dependency scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.30.0
         with:
           scan-type: fs
           scan-ref: .
