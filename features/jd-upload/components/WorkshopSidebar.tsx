@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
 interface NavChild {
   label: string;
@@ -58,7 +59,26 @@ function SettingsIcon(): React.ReactElement {
   );
 }
 
-const NAV_ITEMS: NavItem[] = [
+function ShieldIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
+function UsersIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+const BASE_NAV: NavItem[] = [
   { label: "Dashboard", icon: <GridIcon />, href: "/dashboard" },
   {
     label: "Pricing Workshop",
@@ -71,6 +91,11 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: "Reports", icon: <ReportsIcon />, href: "/reports" },
   { label: "Settings", icon: <SettingsIcon />, href: "/settings" },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { label: "Approval Queue", icon: <ShieldIcon />, href: "/admin" },
+  { label: "User Management", icon: <UsersIcon />, href: "/admin/users" },
 ];
 
 const WORKSHOP_PATHS = ["/jd-upload", "/prompt-template"];
@@ -93,6 +118,9 @@ export function WorkshopSidebar(): React.ReactElement {
   const [workshopOpen, setWorkshopOpen] = useState(() =>
     WORKSHOP_PATHS.some((p) => pathname.startsWith(p)),
   );
+  const { data: currentUser } = useCurrentUser();
+  const isAdmin = currentUser?.role === "ADMIN";
+  const NAV_ITEMS = isAdmin ? [...BASE_NAV, ...ADMIN_NAV] : BASE_NAV;
 
   return (
     <aside
@@ -149,7 +177,9 @@ export function WorkshopSidebar(): React.ReactElement {
           const hasChildren = Boolean(item.children?.length);
           const isGroupActive = hasChildren
             ? WORKSHOP_PATHS.some((p) => pathname.startsWith(p))
-            : pathname.startsWith(item.href);
+            : item.href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(item.href);
 
           return (
             <div key={item.label}>
