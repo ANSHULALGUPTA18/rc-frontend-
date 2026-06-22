@@ -12,24 +12,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
-import {
-  getJdStatus,
-  findRecommendationByJdId,
-  priceJd,
-} from "@/features/jd-upload/api/client";
-import {
-  FAILED_JD_STATUSES,
-  TERMINAL_JD_STATUSES,
-} from "@/features/jd-upload/types";
+import { getJdStatus, findRecommendationByJdId, priceJd } from "@/features/jd-upload/api/client";
+import { FAILED_JD_STATUSES, TERMINAL_JD_STATUSES } from "@/features/jd-upload/types";
 import type { ResolvedPromptConfig } from "@/features/jd-upload/types";
 
 interface RecommendationCardProps {
@@ -145,7 +132,8 @@ export function RecommendationCard({
         priceJd(jdId, config, msal)
           .then(() => setPricingState("done"))
           .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : "Pricing request failed. Please retry.";
+            const msg =
+              err instanceof Error ? err.message : "Pricing request failed. Please retry.";
             setPricingError(msg);
             setPricingState("error");
           });
@@ -187,9 +175,7 @@ export function RecommendationCard({
           />
         )}
 
-        {pricingState === "done" && !statusQuery.error && !isTerminal && (
-          <LoadingSpinner />
-        )}
+        {pricingState === "done" && !statusQuery.error && !isTerminal && <LoadingSpinner />}
 
         {/* Step 3: terminal failure */}
         {pricingState === "done" && !statusQuery.error && isTerminal && isFailed && (
@@ -211,105 +197,112 @@ export function RecommendationCard({
 
             {!recommendationQuery.error && !recommendationQuery.data && <LoadingSpinner />}
 
-            {recommendationQuery.data && (() => {
-              const rec = recommendationQuery.data;
-              const keySkillsSignal = rec.contributingSignals.find(s => s.signalType === "key_skills");
-              const marketSignal = rec.contributingSignals.find(s => s.signalType === "market_factors");
-              const levelSignal = rec.contributingSignals.find(s => s.signalType === "experience_level");
+            {recommendationQuery.data &&
+              (() => {
+                const rec = recommendationQuery.data;
+                const keySkillsSignal = rec.contributingSignals.find(
+                  (s) => s.signalType === "key_skills",
+                );
+                const marketSignal = rec.contributingSignals.find(
+                  (s) => s.signalType === "market_factors",
+                );
+                const levelSignal = rec.contributingSignals.find(
+                  (s) => s.signalType === "experience_level",
+                );
 
-              return (
-              <div className="space-y-5">
-                {/* Rate cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="rounded-lg border border-line bg-surface-muted p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Pay Rate
-                    </p>
-                    <p className="mt-1 text-lg font-bold text-ink">
-                      {formatRateRange(rec.payRateLow, rec.payRateHigh)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-line bg-surface-muted p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Bill Rate
-                    </p>
-                    <p className="mt-1 text-lg font-bold text-ink">
-                      {formatRateRange(rec.billRateLow, rec.billRateHigh)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-line bg-surface-muted p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                      Confidence
-                    </p>
-                    <p className="mt-1 text-lg font-bold text-ink">
-                      {Math.round(rec.confidenceScore * 100)}%
-                    </p>
-                    <p className="text-xs text-ink-muted">
-                      Markup {parseFloat(rec.markupPct).toFixed(1)}%
-                      {levelSignal && ` • ${levelSignal.description}`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Pricing Rationale */}
-                {rec.explanation && (
-                  <div className="rounded-lg border border-line bg-blue-50 p-4">
-                    <h3 className="mb-2 text-sm font-bold text-ink">Pricing Rationale</h3>
-                    <p className="text-sm leading-relaxed text-ink-muted">{rec.explanation}</p>
-                  </div>
-                )}
-
-                {/* Key Skills driving rate */}
-                {keySkillsSignal && (
-                  <div>
-                    <h3 className="mb-2 text-sm font-bold text-ink">Key Skills (Rate Drivers)</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {keySkillsSignal.description.split(", ").map((skill) => (
-                        <span
-                          key={skill}
-                          className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200"
-                        >
-                          {skill}
-                        </span>
-                      ))}
+                return (
+                  <div className="space-y-5">
+                    {/* Rate cards */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="rounded-lg border border-line bg-surface-muted p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Pay Rate
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-ink">
+                          {formatRateRange(rec.payRateLow, rec.payRateHigh)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-line bg-surface-muted p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Bill Rate
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-ink">
+                          {formatRateRange(rec.billRateLow, rec.billRateHigh)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-line bg-surface-muted p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Confidence
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-ink">
+                          {Math.round(rec.confidenceScore * 100)}%
+                        </p>
+                        <p className="text-xs text-ink-muted">
+                          Markup {parseFloat(rec.markupPct).toFixed(1)}%
+                          {levelSignal && ` • ${levelSignal.description}`}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Market Factors */}
-                {marketSignal && (
-                  <div>
-                    <h3 className="mb-2 text-sm font-bold text-ink">Market Factors</h3>
-                    <ul className="space-y-1">
-                      {marketSignal.description.split("; ").map((factor, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-ink-muted">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
-                          {factor}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                    {/* Pricing Rationale */}
+                    {rec.explanation && (
+                      <div className="rounded-lg border border-line bg-blue-50 p-4">
+                        <h3 className="mb-2 text-sm font-bold text-ink">Pricing Rationale</h3>
+                        <p className="text-sm leading-relaxed text-ink-muted">{rec.explanation}</p>
+                      </div>
+                    )}
 
-                {/* Warnings */}
-                {(rec.marketDataUnavailable ||
-                  rec.rateCardConstraintViolated ||
-                  rec.fallbackReason) && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                    {rec.marketDataUnavailable && (
-                      <p>Market data was unavailable for this role.</p>
+                    {/* Key Skills driving rate */}
+                    {keySkillsSignal && (
+                      <div>
+                        <h3 className="mb-2 text-sm font-bold text-ink">
+                          Key Skills (Rate Drivers)
+                        </h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {keySkillsSignal.description.split(", ").map((skill) => (
+                            <span
+                              key={skill}
+                              className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                    {rec.rateCardConstraintViolated && (
-                      <p>This recommendation violates a rate card constraint.</p>
+
+                    {/* Market Factors */}
+                    {marketSignal && (
+                      <div>
+                        <h3 className="mb-2 text-sm font-bold text-ink">Market Factors</h3>
+                        <ul className="space-y-1">
+                          {marketSignal.description.split("; ").map((factor, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-ink-muted">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
+                              {factor}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
-                    {rec.fallbackReason && (
-                      <p>Fallback reason: {rec.fallbackReason}</p>
+
+                    {/* Warnings */}
+                    {(rec.marketDataUnavailable ||
+                      rec.rateCardConstraintViolated ||
+                      rec.fallbackReason) && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        {rec.marketDataUnavailable && (
+                          <p>Market data was unavailable for this role.</p>
+                        )}
+                        {rec.rateCardConstraintViolated && (
+                          <p>This recommendation violates a rate card constraint.</p>
+                        )}
+                        {rec.fallbackReason && <p>Fallback reason: {rec.fallbackReason}</p>}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-              );
-            })()}
+                );
+              })()}
           </>
         )}
       </CardContent>

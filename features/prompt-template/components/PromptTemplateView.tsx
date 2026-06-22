@@ -17,8 +17,8 @@ export function PromptTemplateView(): React.ReactElement {
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-ink">Prompt Templates</h1>
         <p className="mt-1 max-w-xl text-sm text-ink-muted">
-          Manage and reusable AI instruction sets for high-precision extraction
-          and pricing analysis.
+          Manage and reusable AI instruction sets for high-precision extraction and pricing
+          analysis.
         </p>
       </header>
 
@@ -37,11 +37,7 @@ export function PromptTemplateView(): React.ReactElement {
         ))}
       </div>
 
-      <CreatePromptModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreate={add}
-      />
+      <CreatePromptModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={add} />
     </AppShell>
   );
 }

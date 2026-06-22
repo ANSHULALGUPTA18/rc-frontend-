@@ -1,0 +1,30 @@
+name: hotfix-backport
+
+# When a hotfix merges to main, auto-open backport PRs to staging and develop
+# so the fix is never lost. Pure GitHub — no Azure needed.
+on:
+  push:
+    branches: [main]
+
+jobs:
+  backport:
+    if: contains(github.event.head_commit.message, 'hotfix')
+    runs-on: [self-hosted, rcp-frontend]
+    permissions:
+      contents: read
+      pull-requests: write
+    strategy:
+      matrix:
+        target: [staging, develop]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Open backport PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create --base ${{ matrix.target }} --head main \
+            --title "backport: hotfix to ${{ matrix.target }}" \
+            --body "Automated backport of a hotfix merged to main." || \
+          echo "Backport PR to ${{ matrix.target }} may already exist."

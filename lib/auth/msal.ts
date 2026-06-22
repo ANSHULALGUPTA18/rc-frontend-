@@ -33,9 +33,7 @@ import { BACKEND_API_SCOPE } from "@/lib/api/config";
 
 export const msalConfig: Configuration = {
   auth: {
-    clientId:
-      process.env.NEXT_PUBLIC_AZURE_CLIENT_ID ??
-      "00000000-0000-0000-0000-000000000000", // placeholder — replace via env
+    clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID ?? "00000000-0000-0000-0000-000000000000", // placeholder — replace via env
     authority: `https://login.microsoftonline.com/${
       process.env.NEXT_PUBLIC_AZURE_TENANT_ID ?? "common"
     }`,
@@ -56,9 +54,7 @@ export const msalConfig: Configuration = {
      */
     redirectUri:
       process.env.NEXT_PUBLIC_AZURE_REDIRECT_URI ??
-      (typeof window !== "undefined"
-        ? `${window.location.origin}/login`
-        : "/login"),
+      (typeof window !== "undefined" ? `${window.location.origin}/login` : "/login"),
     postLogoutRedirectUri: "/login",
   },
   cache: {

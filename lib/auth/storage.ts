@@ -11,7 +11,7 @@
  */
 
 const TOKEN_KEY = "rc_auth_token";
-const USER_KEY  = "rc_auth_user";
+const USER_KEY = "rc_auth_user";
 const SESSION_COOKIE = "rc_session";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ export interface StoredUser {
 
 export function setToken(token: string, rememberMe: boolean): void {
   const storage = rememberMe ? localStorage : sessionStorage;
-  const other   = rememberMe ? sessionStorage : localStorage;
+  const other = rememberMe ? sessionStorage : localStorage;
   storage.setItem(TOKEN_KEY, token);
   other.removeItem(TOKEN_KEY);
   setSessionCookie();
@@ -40,7 +40,7 @@ export function getToken(): string | null {
 
 export function setUser(user: StoredUser, rememberMe: boolean): void {
   const storage = rememberMe ? localStorage : sessionStorage;
-  const other   = rememberMe ? sessionStorage : localStorage;
+  const other = rememberMe ? sessionStorage : localStorage;
   storage.setItem(USER_KEY, JSON.stringify(user));
   other.removeItem(USER_KEY);
 }

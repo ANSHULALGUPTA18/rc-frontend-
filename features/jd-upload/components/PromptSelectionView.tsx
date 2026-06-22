@@ -15,8 +15,7 @@ const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   {
     id: "1",
     name: "Prompt_1",
-    content:
-      "Please provide the public sector hourly pay rate of this position.",
+    content: "Please provide the public sector hourly pay rate of this position.",
   },
   {
     id: "2",
@@ -161,12 +160,9 @@ export function PromptSelectionView({
 
   const selected = files.find((f) => f.id === selectedId) ?? files[0];
   const cfg = selected ? (configs[selected.id] ?? defaultConfig()) : null;
-  const activeTpl = promptOptions.find(
-    (t) => t.id === cfg?.promptTemplateId,
-  ) ?? promptOptions[0];
+  const activeTpl = promptOptions.find((t) => t.id === cfg?.promptTemplateId) ?? promptOptions[0];
 
-  const previewContent =
-    cfg?.promptMode === "custom" ? cfg.customContent : activeTpl.content;
+  const previewContent = cfg?.promptMode === "custom" ? cfg.customContent : activeTpl.content;
 
   return (
     <AppShell>
@@ -250,17 +246,13 @@ export function PromptSelectionView({
               <div className="rounded-card border border-line bg-surface p-6 shadow-card">
                 {/* Header row */}
                 <div className="mb-5 flex items-center justify-between gap-4">
-                  <span className="text-sm font-semibold text-ink">
-                    AI Analysis Instructions
-                  </span>
+                  <span className="text-sm font-semibold text-ink">AI Analysis Instructions</span>
                   <div className="flex rounded-lg border border-line p-0.5">
                     {(["default", "custom"] as PromptMode[]).map((mode) => (
                       <button
                         key={mode}
                         type="button"
-                        onClick={() =>
-                          patchConfig(selected.id, { promptMode: mode })
-                        }
+                        onClick={() => patchConfig(selected.id, { promptMode: mode })}
                         className={cn(
                           "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
                           cfg.promptMode === mode
@@ -280,9 +272,7 @@ export function PromptSelectionView({
                     {promptsLoading && <LoadingSpinner />}
                     {promptsError && <ErrorState message="Failed to load prompt templates." />}
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-ink">
-                        Prompt Template
-                      </label>
+                      <label className="block text-sm font-medium text-ink">Prompt Template</label>
                       <div className="relative">
                         <select
                           value={cfg.promptTemplateId}
@@ -307,9 +297,7 @@ export function PromptSelectionView({
                     {/* Preview */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-ink">
-                          Preview
-                        </label>
+                        <label className="block text-sm font-medium text-ink">Preview</label>
                         <button
                           type="button"
                           onClick={() =>
@@ -335,8 +323,8 @@ export function PromptSelectionView({
                         )}
                       />
                       <p className="text-xs text-ink-subtle">
-                        Helper: Your instructions will override the standard
-                        extraction model for this specific JD.
+                        Helper: Your instructions will override the standard extraction model for
+                        this specific JD.
                       </p>
                     </div>
                   </div>
@@ -357,8 +345,8 @@ export function PromptSelectionView({
                       className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
                     />
                     <p className="text-xs text-ink-subtle">
-                      Helper: Your instructions will override the standard
-                      extraction model for this specific JD.
+                      Helper: Your instructions will override the standard extraction model for this
+                      specific JD.
                     </p>
                   </div>
                 )}
@@ -366,29 +354,21 @@ export function PromptSelectionView({
                 {/* Location + Sector */}
                 <div className="mt-5 grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-ink">
-                      Location
-                    </label>
+                    <label className="block text-sm font-medium text-ink">Location</label>
                     <input
                       type="text"
                       value={cfg.location}
-                      onChange={(e) =>
-                        patchConfig(selected.id, { location: e.target.value })
-                      }
+                      onChange={(e) => patchConfig(selected.id, { location: e.target.value })}
                       placeholder="Enter Location Here"
                       className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-ink">
-                      Sector
-                    </label>
+                    <label className="block text-sm font-medium text-ink">Sector</label>
                     <input
                       type="text"
                       value={cfg.sector}
-                      onChange={(e) =>
-                        patchConfig(selected.id, { sector: e.target.value })
-                      }
+                      onChange={(e) => patchConfig(selected.id, { sector: e.target.value })}
                       placeholder="Public Sector"
                       className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
                     />
@@ -403,10 +383,14 @@ export function PromptSelectionView({
                     const resolved: Record<string, ResolvedPromptConfig> = {};
                     for (const f of files) {
                       const cfg = configs[f.id] ?? defaultConfig();
-                      const tpl = promptOptions.find((t) => t.id === cfg.promptTemplateId) ?? promptOptions[0];
+                      const tpl =
+                        promptOptions.find((t) => t.id === cfg.promptTemplateId) ??
+                        promptOptions[0];
                       resolved[f.id] = {
-                        promptTemplateId: cfg.promptMode === "default" ? cfg.promptTemplateId : null,
-                        promptContent: cfg.promptMode === "custom" ? cfg.customContent : (tpl?.content ?? ""),
+                        promptTemplateId:
+                          cfg.promptMode === "default" ? cfg.promptTemplateId : null,
+                        promptContent:
+                          cfg.promptMode === "custom" ? cfg.customContent : (tpl?.content ?? ""),
                         locationOverride: cfg.location.trim() || null,
                         sectorOverride: cfg.sector.trim() || null,
                       };

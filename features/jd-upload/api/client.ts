@@ -93,9 +93,23 @@ export interface PromptTemplateOption {
 }
 
 const MOCK_PROMPT_OPTIONS: PromptTemplateOption[] = [
-  { id: "1", name: "Prompt_1",      content: "Please provide the public sector hourly pay rate of this position." },
-  { id: "2", name: "analysis_v2",   content: "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD." },
-  { id: "3", name: "extraction_v3", content: "Extract all role-specific compensation data, including base salary bands, bonus structures, and equity components for this position." },
+  {
+    id: "1",
+    name: "Prompt_1",
+    content: "Please provide the public sector hourly pay rate of this position.",
+  },
+  {
+    id: "2",
+    name: "analysis_v2",
+    content:
+      "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD.",
+  },
+  {
+    id: "3",
+    name: "extraction_v3",
+    content:
+      "Extract all role-specific compensation data, including base salary bands, bonus structures, and equity components for this position.",
+  },
 ];
 
 function mapRecommendation(raw: RawRecommendation): PricingRecommendation {
@@ -114,7 +128,7 @@ function mapRecommendation(raw: RawRecommendation): PricingRecommendation {
         signalType: signal.signal_type,
         description: signal.description,
         weight: signal.weight,
-      })
+      }),
     ),
     marketDataUnavailable: raw.market_data_unavailable,
     rateCardApplied: raw.rate_card_applied,
@@ -141,7 +155,7 @@ function mapExtractedFields(raw: RawExtractedFields): ExtractedFields {
 
 export async function submitJd(
   file: File,
-  msal?: MsalTokenContext
+  msal?: MsalTokenContext,
 ): Promise<{ jdId: string; status: string; extractedFields: ExtractedFields }> {
   if (IS_MOCK) {
     return {
@@ -179,7 +193,7 @@ export async function submitJd(
 
 export async function getJdStatus(
   jdId: string,
-  msal?: MsalTokenContext
+  msal?: MsalTokenContext,
 ): Promise<JdStatusResponse> {
   if (IS_MOCK) {
     return {
@@ -200,7 +214,7 @@ export async function getJdStatus(
 
 export async function findRecommendationByJdId(
   jdId: string,
-  msal?: MsalTokenContext
+  msal?: MsalTokenContext,
 ): Promise<PricingRecommendation | null> {
   if (IS_MOCK) {
     return {
@@ -214,7 +228,11 @@ export async function findRecommendationByJdId(
       confidenceScore: 0.87,
       status: "pending",
       contributingSignals: [
-        { signalType: "market_data", description: "BLS median for this role/region", weight: "0.6" },
+        {
+          signalType: "market_data",
+          description: "BLS median for this role/region",
+          weight: "0.6",
+        },
         { signalType: "rate_card", description: "Client rate card cap applied", weight: "0.4" },
       ],
       marketDataUnavailable: false,
@@ -242,17 +260,14 @@ export async function priceJd(
   if (IS_MOCK) {
     return { jdId, status: "pending_review" };
   }
-  const res = await apiFetch<{ jd_id: string; status: string }>(
-    `/v1/jds/${jdId}/price`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        prompt_content: promptConfig.promptContent,
-        location_override: promptConfig.locationOverride,
-        sector_override: promptConfig.sectorOverride,
-      }),
-      msal,
-    },
-  );
+  const res = await apiFetch<{ jd_id: string; status: string }>(`/v1/jds/${jdId}/price`, {
+    method: "POST",
+    body: JSON.stringify({
+      prompt_content: promptConfig.promptContent,
+      location_override: promptConfig.locationOverride,
+      sector_override: promptConfig.sectorOverride,
+    }),
+    msal,
+  });
   return { jdId: res.jd_id, status: res.status };
 }

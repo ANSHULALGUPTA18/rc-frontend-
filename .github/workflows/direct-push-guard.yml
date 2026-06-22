@@ -1,0 +1,22 @@
+name: direct-push-guard
+
+# Tripwire: alerts if someone pushes directly to a protected branch (bypassing PR review).
+# Until a Teams webhook secret exists, it just fails the run so the push is visible.
+on:
+  push:
+    branches: [develop, staging, main]
+
+jobs:
+  guard:
+    runs-on: [self-hosted, rcp-frontend]
+    steps:
+      - name: Detect non-PR push
+        if: ${{ !contains(github.event.head_commit.message, 'Merge pull request') }}
+        run: |
+          MSG="⚠️ Direct push to ${{ github.ref_name }} by ${{ github.actor }} (no PR)"
+          echo "$MSG"
+          if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+            curl -H 'Content-Type: application/json' \
+              -d "{\"text\":\"$MSG\"}" "${{ secrets.TEAMS_WEBHOOK_URL }}"
+          fi
+          exit 1

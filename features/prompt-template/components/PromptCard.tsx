@@ -22,12 +22,7 @@ function formatRelativeTime(date: Date): string {
 
 function DotsIcon(): React.ReactElement {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className="h-4 w-4"
-    >
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-4 w-4">
       <circle cx="12" cy="5" r="1.5" />
       <circle cx="12" cy="12" r="1.5" />
       <circle cx="12" cy="19" r="1.5" />
@@ -58,9 +53,7 @@ export function PromptCard({
   return (
     <article className="flex flex-col rounded-card border border-line bg-surface shadow-card">
       <div className="flex items-center gap-2 px-4 py-3">
-        <span className="flex-1 truncate text-sm font-semibold text-ink">
-          {template.name}
-        </span>
+        <span className="flex-1 truncate text-sm font-semibold text-ink">{template.name}</span>
         {template.isDefault && (
           <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-ink-muted">
             Default

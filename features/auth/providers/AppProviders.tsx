@@ -19,11 +19,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMsalInstance } from "@/lib/auth/msal";
 import { AuthProvider } from "@/features/auth/context/AuthContext";
 
-export function AppProviders({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
+export function AppProviders({ children }: { children: React.ReactNode }): React.ReactElement {
   const [msalInstance] = useState(() => createMsalInstance());
   const [queryClient] = useState(
     () =>
@@ -35,9 +31,7 @@ export function AppProviders({
   return (
     <MsalProvider instance={msalInstance}>
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </AuthProvider>
     </MsalProvider>
   );

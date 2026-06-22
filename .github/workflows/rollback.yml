@@ -1,0 +1,60 @@
+name: rollback
+
+# Manually roll a frontend Container App back to a previous revision (one-click MTTR).
+#
+# DORMANT until Azure secrets exist (AZURE_CREDENTIALS, AZURE_RESOURCE_GROUP).
+# To find a revision name: az containerapp revision list -n ca-rcp-frontend-<env> -g <rg> -o table
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to roll back
+        type: choice
+        options: [dev, staging, prod]
+        required: true
+      revision:
+        description: Revision name to make 100% active (leave blank to list revisions)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    env:
+      APP: ca-rcp-frontend-${{ inputs.environment }}
+      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: List revisions (when no target given)
+        if: ${{ inputs.revision == '' }}
+        run: |
+          echo "Available revisions for $APP:"
+          az containerapp revision list -n "$APP" -g "$RG" \
+            --query "[].{name:name, active:properties.active, created:properties.createdTime, image:properties.template.containers[0].image}" \
+            -o table
+          echo "Re-run this workflow with the chosen revision name."
+
+      - name: Activate target revision
+        if: ${{ inputs.revision != '' }}
+        run: |
+          echo "Routing 100% traffic to ${{ inputs.revision }}"
+          az containerapp ingress traffic set -n "$APP" -g "$RG" \
+            --revision-weight "${{ inputs.revision }}=100"
+
+      - name: Notify Teams
+        if: inputs.revision != '' && env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -H 'Content-Type: application/json' \
+            -d "{\"text\":\"⏪ Frontend ${{ inputs.environment }} rolled back to ${{ inputs.revision }} by ${{ github.actor }}\"}" \
+            "$TEAMS_WEBHOOK_URL"

@@ -31,7 +31,7 @@ export default defineConfig({
       exclude: [
         "**/__tests__/**",
         "**/*.test.{ts,tsx}",
-        "**/api/client.ts",   // mock data constants, not business logic
+        "**/api/client.ts", // mock data constants, not business logic
       ],
       thresholds: { lines: 70, functions: 70, branches: 70 },
     },

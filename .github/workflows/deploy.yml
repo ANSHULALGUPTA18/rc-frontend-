@@ -1,0 +1,104 @@
+name: deploy
+
+# Build -> push to ACR -> deploy Container App -> smoke test -> auto-rollback -> notify.
+#
+# DORMANT until the Azure team delivers these secrets (see RCP_FRONTEND_AZURE_SETUP.md §7):
+#   repo:  AZURE_CREDENTIALS, ACR_NAME, ACR_LOGIN_SERVER, AZURE_RESOURCE_GROUP, TEAMS_WEBHOOK_URL
+#   env (dev/staging/prod): NEXT_PUBLIC_* values
+# Until a backend exists, set the env variable NEXT_PUBLIC_USE_MOCK=true on each GitHub Environment.
+
+on:
+  push:
+    branches: [develop] # auto-deploy to Dev
+  workflow_dispatch: # manual promotion to Staging / Prod
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, prod]
+        required: true
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # never cancel a deploy mid-flight
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 30
+    # Resolves per-environment secrets/vars from the matching GitHub Environment.
+    environment: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
+    env:
+      ENV: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
+      APP: ca-rcp-frontend-${{ github.event_name == 'push' && 'dev' || inputs.environment }}
+      IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/rc-pricing-frontend
+      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: ACR login
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Resolve image tag
+        run: echo "TAG=${ENV}-${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+
+      - name: Build & push image (per-env NEXT_PUBLIC_* baked in)
+        run: |
+          docker buildx build \
+            --build-arg NEXT_PUBLIC_USE_MOCK="${{ vars.NEXT_PUBLIC_USE_MOCK || 'true' }}" \
+            --build-arg NEXT_PUBLIC_API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}" \
+            --build-arg NEXT_PUBLIC_AZURE_CLIENT_ID="${{ secrets.NEXT_PUBLIC_AZURE_CLIENT_ID }}" \
+            --build-arg NEXT_PUBLIC_AZURE_TENANT_ID="${{ secrets.NEXT_PUBLIC_AZURE_TENANT_ID }}" \
+            --build-arg NEXT_PUBLIC_AZURE_REDIRECT_URI="${{ secrets.NEXT_PUBLIC_AZURE_REDIRECT_URI }}" \
+            --build-arg NEXT_PUBLIC_AZURE_API_SCOPE="${{ secrets.NEXT_PUBLIC_AZURE_API_SCOPE }}" \
+            -t "$IMAGE:$TAG" -t "$IMAGE:$ENV-latest" \
+            --push .
+
+      - name: Capture current active revision (for rollback)
+        run: |
+          PREV=$(az containerapp revision list -n "$APP" -g "$RG" \
+            --query "[?properties.active].name | [0]" -o tsv || true)
+          echo "PREV=$PREV" >> "$GITHUB_ENV"
+          echo "Current active revision: ${PREV:-none}"
+
+      - name: Deploy new revision
+        run: |
+          az containerapp update -n "$APP" -g "$RG" --image "$IMAGE:$TAG"
+
+      - name: Smoke test (HTTP)
+        run: |
+          FQDN=$(az containerapp show -n "$APP" -g "$RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Probing https://$FQDN/"
+          for i in $(seq 1 12); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FQDN/" || true)
+            # A 200, or a 3xx redirect to /login (unauthenticated), both mean the app is alive.
+            if echo "$CODE" | grep -qE '^(200|301|302|307|308)$'; then
+              echo "Smoke OK (HTTP $CODE)"; exit 0
+            fi
+            echo "attempt $i: HTTP $CODE — retrying"; sleep 10
+          done
+          echo "Smoke test failed"; exit 1
+
+      - name: Auto-rollback on failure
+        if: failure() && env.PREV != ''
+        run: |
+          echo "Rolling back $APP to $PREV"
+          az containerapp ingress traffic set -n "$APP" -g "$RG" \
+            --revision-weight "$PREV=100"
+
+      - name: Notify Teams
+        if: always() && env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -H 'Content-Type: application/json' \
+            -d "{\"text\":\"Frontend deploy to ${ENV}: ${{ job.status }} (tag ${TAG})\"}" \
+            "$TEAMS_WEBHOOK_URL"

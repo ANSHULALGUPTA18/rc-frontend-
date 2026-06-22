@@ -45,11 +45,14 @@ export function usePromptTemplates(): UsePromptTemplatesResult {
     if (data) setLocal(data);
   }, [data]);
 
-  const add = useCallback(async (name: string, content: string) => {
-    const created = await createPromptTemplate(name, content);
-    setLocal((prev) => [...prev, created]);
-    await queryClient.invalidateQueries({ queryKey: ["prompt-templates"] });
-  }, [queryClient]);
+  const add = useCallback(
+    async (name: string, content: string) => {
+      const created = await createPromptTemplate(name, content);
+      setLocal((prev) => [...prev, created]);
+      await queryClient.invalidateQueries({ queryKey: ["prompt-templates"] });
+    },
+    [queryClient],
+  );
 
   const setDefault = useCallback((id: string) => {
     setLocal((prev) => prev.map((t) => ({ ...t, isDefault: t.id === id })));

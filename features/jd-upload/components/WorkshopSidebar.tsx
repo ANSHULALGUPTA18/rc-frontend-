@@ -113,9 +113,7 @@ export function WorkshopSidebar(): React.ReactElement {
         {!collapsed && (
           <span className="leading-tight">
             <span className="block text-lg font-bold">RC Pricing</span>
-            <span className="block text-[11px] text-sidebar-muted">
-              powered by Techgene
-            </span>
+            <span className="block text-[11px] text-sidebar-muted">powered by Techgene</span>
           </span>
         )}
       </div>
@@ -200,9 +198,7 @@ export function WorkshopSidebar(): React.ReactElement {
                   )}
                 >
                   <span className="h-5 w-5 shrink-0">{item.icon}</span>
-                  {!collapsed && (
-                    <span className="flex-1 text-left">{item.label}</span>
-                  )}
+                  {!collapsed && <span className="flex-1 text-left">{item.label}</span>}
                 </Link>
               )}
 
