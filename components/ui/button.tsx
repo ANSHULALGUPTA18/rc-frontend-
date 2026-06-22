@@ -4,15 +4,13 @@ import { cn } from "@/lib/utils/cn";
 type ButtonVariant = "primary" | "secondary" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "bg-brand text-white hover:bg-brand-dark disabled:bg-line-strong disabled:text-white",
+  primary: "bg-brand text-white hover:bg-brand-dark disabled:bg-line-strong disabled:text-white",
   secondary:
     "border border-line-strong bg-surface text-ink hover:bg-surface-muted disabled:opacity-60",
   ghost: "text-ink hover:bg-surface-muted disabled:opacity-60",

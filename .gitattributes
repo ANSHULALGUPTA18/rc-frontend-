@@ -1,0 +1,12 @@
+# Normalize line endings to LF in the repo so Prettier's format:check is
+# consistent across Windows (local) and the Linux self-hosted runner (CI).
+* text=auto eol=lf
+
+# Binary files — never normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

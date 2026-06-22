@@ -8,11 +8,11 @@ Recruiter-facing web application for the RC Pricing Platform — built with Next
 
 ### Prerequisites
 
-| Requirement | Version |
-|---|---|
+| Requirement                    | Version                     |
+| ------------------------------ | --------------------------- |
 | [Node.js](https://nodejs.org/) | 18.18+ (20 LTS recommended) |
-| npm | comes with Node |
-| Git | any recent version |
+| npm                            | comes with Node             |
+| Git                            | any recent version          |
 
 ### 1. Clone and install
 
@@ -72,15 +72,15 @@ Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to
 
 ### Other useful commands
 
-| Command | What it does |
-|---|---|
-| `npm run build` | Production build |
-| `npm run start` | Run the production build (after `npm run build`) |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
-| `npm test` | Run unit/component tests (Vitest) |
-| `npm run test:watch` | Run unit tests in watch mode |
-| `npm run test:e2e` | Run end-to-end tests (Playwright) |
+| Command              | What it does                                     |
+| -------------------- | ------------------------------------------------ |
+| `npm run build`      | Production build                                 |
+| `npm run start`      | Run the production build (after `npm run build`) |
+| `npm run lint`       | ESLint                                           |
+| `npm run typecheck`  | TypeScript check (`tsc --noEmit`)                |
+| `npm test`           | Run unit/component tests (Vitest)                |
+| `npm run test:watch` | Run unit tests in watch mode                     |
+| `npm run test:e2e`   | Run end-to-end tests (Playwright)                |
 
 ---
 
@@ -107,6 +107,7 @@ Open [http://localhost:3000](http://localhost:3000) — you'll be redirected to
 ---
 
 ### 1. Sidebar Navigation
+
 A collapsible left sidebar used across all screens.
 
 - Logo (`/public/logo.png`) with "RC Pricing / powered by Techgene" branding
@@ -122,6 +123,7 @@ A collapsible left sidebar used across all screens.
 A sequential three-stage wizard managed by `JdWorkshopFlow`. All state (uploaded files) is held in memory and passed between stages — no URL params needed.
 
 #### Stage 1 — Upload (`JdUploadView`)
+
 - Drag-and-drop file zone supporting PDF, DOCX, TXT (max 10 MB each)
 - Duplicate detection by name + size
 - Uploaded files appear as cards below the drop zone (document icon, filename, size, remove button)
@@ -129,6 +131,7 @@ A sequential three-stage wizard managed by `JdWorkshopFlow`. All state (uploaded
 - **Continue** button enabled only when at least one file is uploaded
 
 #### Stage 2 — Prompt Selection (`PromptSelectionView`)
+
 - Left queue panel: all uploaded files shown as selectable cards (active card has blue left border)
 - Each file has its own independent config: prompt mode, template, location, sector
 - **DEFAULT AI PROMPT / CUSTOM USER PROMPT** toggle tabs
@@ -138,12 +141,14 @@ A sequential three-stage wizard managed by `JdWorkshopFlow`. All state (uploaded
 - **Back** returns to Upload; **Continue to Pricing** advances to Stage 3
 
 #### Stage 3 — Pricing (`PricingView`)
+
 - Same queue panel (switch between files to see their pricing)
 - Right panel: **Job Pricing** table — POSITION / EXP.(YRS) / EXISTINGPRICE (shown as dark navy pill)
 - **Edit** (pencil) and **Export CSV** (green outlined) buttons in panel header
 - **Send for Approval** full-width orange button — navigates to `/dashboard`
 
 #### Stages Stepper (`WorkshopStages`)
+
 - Reusable component, receives `activeStage` prop
 - Completed stages show a filled green circle with white checkmark + dark navy connector line
 - Active stage shows an orange dashed ring
@@ -195,11 +200,11 @@ NEXT_PUBLIC_API_URL=            # set this when backend is ready
 
 ### Mock data locations
 
-| File | Data |
-|---|---|
-| `features/dashboard/api/client.ts` | KPI stats, approvals table, recent reports |
-| `features/jd-upload/api/client.ts` | Pricing rows, prompt dropdown options |
-| `features/prompt-template/api/client.ts` | Prompt template cards |
+| File                                     | Data                                       |
+| ---------------------------------------- | ------------------------------------------ |
+| `features/dashboard/api/client.ts`       | KPI stats, approvals table, recent reports |
+| `features/jd-upload/api/client.ts`       | Pricing rows, prompt dropdown options      |
+| `features/prompt-template/api/client.ts` | Prompt template cards                      |
 
 ### Connecting the backend (3 steps)
 
@@ -211,36 +216,35 @@ NEXT_PUBLIC_API_URL=            # set this when backend is ready
 
 ## Folder Map
 
-| Folder | Purpose |
-|---|---|
-| `app/` | Next.js routes — thin page files only |
-| `app/login/` | Public login route |
-| `middleware.ts` | Edge middleware — blocks unauthenticated access to protected routes |
-| `features/jd-upload/` | Upload, Prompt Selection, Pricing stages + sidebar + stepper |
-| `features/prompt-template/` | Prompt template grid, modal, hook |
-| `features/dashboard/` | Dashboard view and KPI components |
-| `features/auth/context/` | `AuthContext` / `AuthProvider` — current user + logout |
-| `features/auth/components/` | `LoginView`, `AuthGuard`, `UserMenu` |
-| `features/auth/hooks/` | Login/logout hooks (mock + Azure) |
-| `features/auth/providers/` | `AppProviders` — MSAL, AuthProvider, TanStack `QueryClientProvider` |
-| `lib/auth/` | `msal.ts` (MSAL config/instance), `storage.ts` (token/user/session storage) |
-| `components/layout/` | `AppShell`, `TopBar` — shared authenticated page layout |
-| `features/*/api/client.ts` | All API functions + mock data |
-| `lib/api/config.ts` | `IS_MOCK` and `API_BASE` env flags |
-| `components/ui/` | Button, Card, FileUpload, LoadingSpinner, ErrorState primitives |
-| `public/` | Static assets (logo.png) |
+| Folder                      | Purpose                                                                     |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `app/`                      | Next.js routes — thin page files only                                       |
+| `app/login/`                | Public login route                                                          |
+| `middleware.ts`             | Edge middleware — blocks unauthenticated access to protected routes         |
+| `features/jd-upload/`       | Upload, Prompt Selection, Pricing stages + sidebar + stepper                |
+| `features/prompt-template/` | Prompt template grid, modal, hook                                           |
+| `features/dashboard/`       | Dashboard view and KPI components                                           |
+| `features/auth/context/`    | `AuthContext` / `AuthProvider` — current user + logout                      |
+| `features/auth/components/` | `LoginView`, `AuthGuard`, `UserMenu`                                        |
+| `features/auth/hooks/`      | Login/logout hooks (mock + Azure)                                           |
+| `features/auth/providers/`  | `AppProviders` — MSAL, AuthProvider, TanStack `QueryClientProvider`         |
+| `lib/auth/`                 | `msal.ts` (MSAL config/instance), `storage.ts` (token/user/session storage) |
+| `components/layout/`        | `AppShell`, `TopBar` — shared authenticated page layout                     |
+| `features/*/api/client.ts`  | All API functions + mock data                                               |
+| `lib/api/config.ts`         | `IS_MOCK` and `API_BASE` env flags                                          |
+| `components/ui/`            | Button, Card, FileUpload, LoadingSpinner, ErrorState primitives             |
+| `public/`                   | Static assets (logo.png)                                                    |
 
 ---
 
 ## Tech Stack
 
-| Tool | Purpose |
-|---|---|
-| Next.js 15 (App Router) | Routing and SSR shell |
-| TypeScript (strict) | Full type safety, no `any` |
-| Tailwind CSS | Utility-first styling with custom design tokens |
-| TanStack Query | Server state, loading/error handling, cache |
-| React Hook Form | (wired in stack, not yet used in forms above) |
+| Tool                    | Purpose                                         |
+| ----------------------- | ----------------------------------------------- |
+| Next.js 15 (App Router) | Routing and SSR shell                           |
+| TypeScript (strict)     | Full type safety, no `any`                      |
+| Tailwind CSS            | Utility-first styling with custom design tokens |
+| TanStack Query          | Server state, loading/error handling, cache     |
+| React Hook Form         | (wired in stack, not yet used in forms above)   |
 
 ---
-

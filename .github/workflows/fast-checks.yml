@@ -1,0 +1,39 @@
+name: fast-checks
+
+# Fast feedback on every push to a feature branch. Non-blocking, lightweight.
+# Runs in mock mode, so no backend or Azure is required.
+on:
+  push:
+    branches-ignore: [develop, staging, main]
+
+concurrency:
+  group: fast-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_PUBLIC_USE_MOCK: "true"
+
+jobs:
+  checks:
+    # Single self-hosted frontend runner. No runner yet? Use: runs-on: ubuntu-latest
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test

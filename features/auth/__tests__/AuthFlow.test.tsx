@@ -129,7 +129,11 @@ describe("AuthFlow", () => {
     function WelcomeBanner() {
       const { user } = useAuth();
       if (!user) return null;
-      return <p>Welcome back, <span>{user.name}</span></p>;
+      return (
+        <p>
+          Welcome back, <span>{user.name}</span>
+        </p>
+      );
     }
 
     render(<WelcomeBanner />, { wrapper: Wrapper });

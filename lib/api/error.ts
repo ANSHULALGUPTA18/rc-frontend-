@@ -64,7 +64,7 @@ export async function parseApiErrorResponse(response: Response): Promise<ApiErro
             !!entry &&
             typeof entry === "object" &&
             typeof (entry as Record<string, unknown>).field === "string" &&
-            typeof (entry as Record<string, unknown>).msg === "string"
+            typeof (entry as Record<string, unknown>).msg === "string",
         );
       }
     }

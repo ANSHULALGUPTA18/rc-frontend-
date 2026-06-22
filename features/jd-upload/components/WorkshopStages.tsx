@@ -24,7 +24,12 @@ const STAGE_DEFS: StageDefinition[] = [
   { id: "recommendations", label: "Recommendations" },
 ];
 
-const STAGE_ORDER: WorkshopStageId[] = ["upload", "extraction", "prompt-selection", "recommendations"];
+const STAGE_ORDER: WorkshopStageId[] = [
+  "upload",
+  "extraction",
+  "prompt-selection",
+  "recommendations",
+];
 
 function getStatus(
   id: WorkshopStageId,
@@ -101,19 +106,18 @@ export function WorkshopStages({
   return (
     <ol className="flex items-center" aria-label="Workshop stages">
       {STAGE_DEFS.map((stage, index) => {
-        let status: "complete" | "active" | "upcoming" | "loading" = getStatus(stage.id, activeStage);
+        let status: "complete" | "active" | "upcoming" | "loading" = getStatus(
+          stage.id,
+          activeStage,
+        );
         if (loading && status === "active") status = "loading";
         const isLast = index === STAGE_DEFS.length - 1;
-        const nextStatus =
-          !isLast ? getStatus(STAGE_DEFS[index + 1].id, activeStage) : null;
+        const nextStatus = !isLast ? getStatus(STAGE_DEFS[index + 1].id, activeStage) : null;
         const connectorDark =
           status === "complete" || status === "loading" || nextStatus === "active";
 
         return (
-          <li
-            key={stage.id}
-            className={cn("flex items-center", !isLast && "flex-1")}
-          >
+          <li key={stage.id} className={cn("flex items-center", !isLast && "flex-1")}>
             <div
               aria-current={status === "active" ? "step" : undefined}
               className={cn(
@@ -142,10 +146,7 @@ export function WorkshopStages({
             {!isLast && (
               <span
                 aria-hidden="true"
-                className={cn(
-                  "mx-3 h-0.5 flex-1",
-                  connectorDark ? "bg-sidebar" : "bg-line",
-                )}
+                className={cn("mx-3 h-0.5 flex-1", connectorDark ? "bg-sidebar" : "bg-line")}
               />
             )}
           </li>

@@ -40,10 +40,7 @@ const MOCK_VALID_PASSWORD = "password123";
  * Throws a plain Error with a human-readable message on failure so the UI
  * can display error.message directly without any additional mapping.
  */
-export async function login(
-  email: string,
-  password: string,
-): Promise<LoginResponse> {
+export async function login(email: string, password: string): Promise<LoginResponse> {
   if (IS_MOCK) {
     // Simulate network latency so loading states are visible during dev
     await new Promise((r) => setTimeout(r, 600));
@@ -63,9 +60,9 @@ export async function login(
   });
 
   if (!res.ok) {
-    const payload = await res
+    const payload = (await res
       .json()
-      .catch(() => ({ message: "Login failed. Please try again." })) as { message?: string };
+      .catch(() => ({ message: "Login failed. Please try again." }))) as { message?: string };
     throw new Error(payload.message ?? "Login failed. Please try again.");
   }
 

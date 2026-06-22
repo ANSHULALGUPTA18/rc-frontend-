@@ -25,7 +25,13 @@ function DocumentIcon(): React.ReactElement {
   );
 }
 
-function SkillPill({ label, variant = "default" }: { label: string; variant?: "default" | "mandatory" }): React.ReactElement {
+function SkillPill({
+  label,
+  variant = "default",
+}: {
+  label: string;
+  variant?: "default" | "mandatory";
+}): React.ReactElement {
   return (
     <span
       className={cn(
@@ -40,7 +46,13 @@ function SkillPill({ label, variant = "default" }: { label: string; variant?: "d
   );
 }
 
-function FieldRow({ label, value }: { label: string; value: string | null | undefined }): React.ReactElement | null {
+function FieldRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}): React.ReactElement | null {
   if (!value) return null;
   return (
     <div className="flex items-start gap-4 py-3 border-b border-line last:border-0">
@@ -53,11 +65,18 @@ function FieldRow({ label, value }: { label: string; value: string | null | unde
 function ConfidenceBadge({ confidence }: { confidence: number }): React.ReactElement {
   const pct = Math.round(confidence * 100);
   const color =
-    pct >= 70 ? "text-green-700 bg-green-50 ring-green-200" :
-    pct >= 40 ? "text-amber-700 bg-amber-50 ring-amber-200" :
-    "text-red-700 bg-red-50 ring-red-200";
+    pct >= 70
+      ? "text-green-700 bg-green-50 ring-green-200"
+      : pct >= 40
+        ? "text-amber-700 bg-amber-50 ring-amber-200"
+        : "text-red-700 bg-red-50 ring-red-200";
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1", color)}>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1",
+        color,
+      )}
+    >
       {pct}% confidence
     </span>
   );
@@ -227,7 +246,8 @@ export function ExtractionView({
 
               {fields.confidence < 0.4 && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  Low extraction confidence — some fields could not be detected automatically. You can still continue.
+                  Low extraction confidence — some fields could not be detected automatically. You
+                  can still continue.
                 </div>
               )}
 

@@ -52,9 +52,7 @@ export function UserMenu(): React.ReactElement {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
-        <span className="hidden text-sm font-medium text-ink sm:block">
-          {displayName}
-        </span>
+        <span className="hidden text-sm font-medium text-ink sm:block">{displayName}</span>
         {/* Avatar circle with initials */}
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar text-xs font-bold text-white">
           {initials}
@@ -66,9 +64,7 @@ export function UserMenu(): React.ReactElement {
           {/* User info */}
           <div className="px-4 py-3">
             <p className="text-sm font-semibold text-ink">{displayName}</p>
-            {displayEmail && (
-              <p className="mt-0.5 text-xs text-ink-muted">{displayEmail}</p>
-            )}
+            {displayEmail && <p className="mt-0.5 text-xs text-ink-muted">{displayEmail}</p>}
             {user?.role && (
               <span className="mt-1.5 inline-flex rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted">
                 {user.role}

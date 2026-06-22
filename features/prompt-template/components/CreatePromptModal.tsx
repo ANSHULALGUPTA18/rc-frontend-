@@ -55,27 +55,19 @@ export function CreatePromptModal({
       aria-labelledby="create-prompt-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-      <div
-        className="absolute inset-0 bg-black/40"
-        aria-hidden="true"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/40" aria-hidden="true" onClick={onClose} />
 
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-line bg-surface p-6 shadow-2xl">
         <h2 id="create-prompt-title" className="text-xl font-bold text-ink">
           Create New Prompt
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Define a new AI instruction set for high-precision extraction and
-          pricing analysis.
+          Define a new AI instruction set for high-precision extraction and pricing analysis.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
           <div className="space-y-1.5">
-            <label
-              htmlFor={nameId}
-              className="block text-sm font-medium text-ink"
-            >
+            <label htmlFor={nameId} className="block text-sm font-medium text-ink">
               Prompt Name
             </label>
             <input
@@ -89,18 +81,13 @@ export function CreatePromptModal({
           </div>
 
           <div className="space-y-1.5">
-            <label
-              htmlFor={contentId}
-              className="block text-sm font-medium text-ink"
-            >
+            <label htmlFor={contentId} className="block text-sm font-medium text-ink">
               Instruction Content
             </label>
             <textarea
               id={contentId}
               value={content}
-              onChange={(e) =>
-                setContent(e.target.value.slice(0, MAX_CHARS))
-              }
+              onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
               rows={8}
               className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
             />
@@ -110,8 +97,7 @@ export function CreatePromptModal({
           </div>
 
           <p className="text-xs text-ink-subtle">
-            These instructions will be available as a custom option in the
-            Pricing Workshop.
+            These instructions will be available as a custom option in the Pricing Workshop.
           </p>
 
           <div className="flex justify-end gap-3 border-t border-line pt-4">

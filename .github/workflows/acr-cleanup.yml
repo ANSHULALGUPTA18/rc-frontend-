@@ -1,0 +1,42 @@
+name: acr-cleanup
+
+# Weekly hygiene: prune old frontend images from ACR and reclaim local runner disk.
+# The local docker prune half is critical on a single self-hosted runner (disk exhaustion).
+#
+# DORMANT (ACR step) until Azure secrets exist. The docker-prune step is safe to run anytime.
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # Sunday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 20
+    env:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+      ACR_NAME: ${{ secrets.ACR_NAME }}
+    steps:
+      - name: Azure login
+        if: env.AZURE_CREDENTIALS != ''
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Purge ACR images older than 30 days (keep last 10)
+        if: env.ACR_NAME != ''
+        run: |
+          az acr run --registry "$ACR_NAME" \
+            --cmd "acr purge --filter 'rc-pricing-frontend:.*' --ago 30d --keep 10 --untagged" \
+            /dev/null
+
+      - name: Local docker prune (preserve last 7 days of layers)
+        run: |
+          docker system df || true
+          docker system prune -af --filter "until=168h"
+          docker builder prune -af --filter "until=168h" || true
+          docker system df || true

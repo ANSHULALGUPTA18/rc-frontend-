@@ -102,7 +102,9 @@ export function JdWorkshopFlow(): React.ReactElement {
         submittedJds={submittedJds}
         loading={extracting}
         fileNames={files.map((f) => f.file.name)}
-        onBack={() => { if (!extracting) setStage("upload"); }}
+        onBack={() => {
+          if (!extracting) setStage("upload");
+        }}
         onContinue={() => setStage("prompt-selection")}
       />
     );
@@ -116,9 +118,7 @@ export function JdWorkshopFlow(): React.ReactElement {
           {submitError}
         </div>
       )}
-      <JdUploadView
-        onContinue={(f) => void handleUploadContinue(f)}
-      />
+      <JdUploadView onContinue={(f) => void handleUploadContinue(f)} />
     </>
   );
 }

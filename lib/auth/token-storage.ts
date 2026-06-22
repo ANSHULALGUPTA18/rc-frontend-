@@ -70,7 +70,7 @@ export async function getAccessToken(msal?: MsalTokenContext): Promise<string | 
       throw new Error(
         `Unable to get permission to call the RC Pricing API (scope: ${apiTokenRequest.scopes[0]}). ` +
           "This usually means the API permission for this scope hasn't been granted/consented in Azure AD yet. " +
-          "Contact your administrator."
+          "Contact your administrator.",
       );
     }
     throw error;

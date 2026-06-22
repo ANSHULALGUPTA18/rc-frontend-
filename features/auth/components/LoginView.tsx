@@ -35,8 +35,16 @@ interface LoginFormValues {
 
 function EyeIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -45,8 +53,16 @@ function EyeIcon(): React.ReactElement {
 
 function EyeOffIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
       <line x1="1" y1="1" x2="23" y2="23" />
@@ -67,9 +83,9 @@ function SpinnerIcon(): React.ReactElement {
 function MicrosoftLogo(): React.ReactElement {
   return (
     <svg width="21" height="21" viewBox="0 0 21 21" aria-hidden="true">
-      <rect x="1"  y="1"  width="9" height="9" fill="#F25022" />
-      <rect x="11" y="1"  width="9" height="9" fill="#7FBA00" />
-      <rect x="1"  y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
       <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
     </svg>
   );
@@ -109,8 +125,19 @@ function AzureLoginPanel(): React.ReactElement {
     return (
       <div className="flex items-center justify-center py-8">
         <svg className="h-6 w-6 animate-spin text-brand" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          />
         </svg>
         <span className="ml-3 text-sm text-ink-muted">Signing you in…</span>
       </div>
@@ -119,9 +146,7 @@ function AzureLoginPanel(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      <p className="text-center text-sm text-ink-muted">
-        
-      </p>
+      <p className="text-center text-sm text-ink-muted"></p>
 
       <button
         type="button"
@@ -166,8 +191,7 @@ function MockLoginPanel(): React.ReactElement {
     <>
       {/* Dev-mode hint */}
       <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-        <strong>Dev mode</strong> — use{" "}
-        <code className="font-mono">admin@techgene.com</code> /{" "}
+        <strong>Dev mode</strong> — use <code className="font-mono">admin@techgene.com</code> /{" "}
         <code className="font-mono">password123</code>
       </div>
 
@@ -178,9 +202,15 @@ function MockLoginPanel(): React.ReactElement {
           aria-live="assertive"
           className="mb-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            strokeLinecap="round" aria-hidden="true"
-            className="mt-0.5 h-4 w-4 shrink-0 text-red-500">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            className="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+          >
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -201,7 +231,10 @@ function MockLoginPanel(): React.ReactElement {
             autoComplete="email"
             aria-invalid={Boolean(errors.email)}
             placeholder="you@techgene.com"
-            className={cn(inputBase, errors.email && "border-red-400 focus:border-red-400 focus:ring-red-400")}
+            className={cn(
+              inputBase,
+              errors.email && "border-red-400 focus:border-red-400 focus:ring-red-400",
+            )}
             {...register("email", {
               required: "Email is required.",
               pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Invalid email format." },
@@ -223,7 +256,8 @@ function MockLoginPanel(): React.ReactElement {
               aria-invalid={Boolean(errors.password)}
               placeholder="••••••••"
               className={cn(
-                inputBase, "pr-10",
+                inputBase,
+                "pr-10",
                 errors.password && "border-red-400 focus:border-red-400 focus:ring-red-400",
               )}
               {...register("password", { required: "Password is required." })}
@@ -243,12 +277,18 @@ function MockLoginPanel(): React.ReactElement {
         {/* Remember Me + Forgot Password */}
         <div className="flex items-center justify-between">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
-            <input type="checkbox" className="h-4 w-4 rounded border-line accent-brand"
-              {...register("rememberMe")} />
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-line accent-brand"
+              {...register("rememberMe")}
+            />
             Remember me
           </label>
-          <a href="#" onClick={(e) => e.preventDefault()}
-            className="text-sm font-medium text-sidebar-active hover:underline">
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            className="text-sm font-medium text-sidebar-active hover:underline"
+          >
             Forgot password?
           </a>
         </div>
@@ -273,11 +313,16 @@ export function LoginView(): React.ReactElement {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4 py-12">
       <div className="w-full max-w-md">
-
         {/* Branding */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <Image src="/logo.png" alt="RC Pricing logo" width={48} height={48} className="h-12 w-12" />
-          
+          <Image
+            src="/logo.png"
+            alt="RC Pricing logo"
+            width={48}
+            height={48}
+            className="h-12 w-12"
+          />
+
           <div className="text-center">
             <p className="text-xl font-bold text-ink">RC Pricing</p>
             <p className="text-xs text-ink-subtle">powered by Techgene</p>

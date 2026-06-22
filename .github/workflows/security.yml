@@ -1,0 +1,57 @@
+name: security
+
+# Parallel, mostly non-blocking security track. Runs on PRs and nightly.
+# Secret scan + container/filesystem scan block on CRITICAL once the baseline is clean;
+# dependency audit is report-only.
+on:
+  pull_request:
+    branches: [develop, staging, main]
+  schedule:
+    - cron: "0 2 * * *" # nightly 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+
+jobs:
+  scan:
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Gitleaks needs full history
+
+      # The gitleaks-action wrapper requires a paid license for org repos, but the
+      # gitleaks binary is free — run it via its Docker image instead.
+      - name: Secret scan (Gitleaks)
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" \
+            ghcr.io/gitleaks/gitleaks:latest detect \
+            --source=/repo --redact --no-banner --verbose
+
+      - name: Dependency audit (report only)
+        run: |
+          echo "## npm audit (high+)" >> "$GITHUB_STEP_SUMMARY"
+          npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+
+      - name: Trivy filesystem/dependency scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          # Report-only at first; flip exit-code to "1" once the baseline is clean.
+          exit-code: "0"
+          ignore-unfixed: true
+          cache-dir: /home/github-runner/.cache/trivy
+
+      - name: Notify Teams on failure
+        if: failure() && env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -H 'Content-Type: application/json' \
+            -d "{\"text\":\"🔒 Frontend security scan failed on ${{ github.ref_name }}\"}" \
+            "$TEAMS_WEBHOOK_URL"
