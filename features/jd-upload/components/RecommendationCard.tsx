@@ -13,9 +13,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
-import { getJdStatus, findRecommendationByJdId, priceJd } from "@/features/jd-upload/api/client";
+import {
+  getJdStatus,
+  findRecommendationByJdId,
+  priceJd,
+  submitForApproval,
+} from "@/features/jd-upload/api/client";
 import { FAILED_JD_STATUSES, TERMINAL_JD_STATUSES } from "@/features/jd-upload/types";
 import type { ResolvedPromptConfig } from "@/features/jd-upload/types";
 
@@ -57,6 +63,8 @@ function StatusBadge({ status }: { status: string }): React.ReactElement {
   );
 }
 
+type ApprovalState = "idle" | "submitting" | "submitted" | "error";
+
 export function RecommendationCard({
   jdId,
   fileName,
@@ -65,6 +73,9 @@ export function RecommendationCard({
   const msal = useMsalTokenContext();
   const [pricingState, setPricingState] = useState<PricingState>("idle");
   const [pricingError, setPricingError] = useState<string | null>(null);
+  const [approvalState, setApprovalState] = useState<ApprovalState>("idle");
+  const [approvalNotes, setApprovalNotes] = useState("");
+  const [showNotesInput, setShowNotesInput] = useState(false);
 
   // Prevent double-firing in React Strict Mode
   const triggered = useRef(false);
@@ -298,6 +309,106 @@ export function RecommendationCard({
                           <p>This recommendation violates a rate card constraint.</p>
                         )}
                         {rec.fallbackReason && <p>Fallback reason: {rec.fallbackReason}</p>}
+                      </div>
+                    )}
+                    {/* Approval Status */}
+                    {rec.submissionStatus === "approved" ? (
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
+                        <p className="text-sm font-semibold text-green-700">Approved</p>
+                        <p className="mt-1 text-xs text-green-600">
+                          This pricing recommendation has been approved by admin.
+                        </p>
+                      </div>
+                    ) : rec.submissionStatus === "rejected" ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+                        <p className="text-sm font-semibold text-red-700">Rejected</p>
+                        <p className="mt-1 text-xs text-red-600">
+                          This pricing recommendation was rejected by admin.
+                        </p>
+                      </div>
+                    ) : rec.submissionStatus === "pending_approval" ||
+                      approvalState === "submitted" ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+                        <p className="text-sm font-semibold text-amber-700">
+                          Pending Admin Approval
+                        </p>
+                        <p className="mt-1 text-xs text-amber-600">
+                          Waiting for admin to review this recommendation.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-line bg-surface-muted p-4 space-y-3">
+                        {!showNotesInput ? (
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-ink-muted">
+                              Ready to submit this recommendation?
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowNotesInput(true)}
+                                className="text-xs font-medium text-sidebar-active hover:underline"
+                              >
+                                Add Notes
+                              </button>
+                              <Button
+                                size="sm"
+                                disabled={approvalState === "submitting"}
+                                onClick={() => {
+                                  setApprovalState("submitting");
+                                  submitForApproval(rec.id, null, msal)
+                                    .then(() => setApprovalState("submitted"))
+                                    .catch(() => setApprovalState("error"));
+                                }}
+                              >
+                                {approvalState === "submitting"
+                                  ? "Submitting..."
+                                  : "Send for Approval"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <textarea
+                              value={approvalNotes}
+                              onChange={(e) => setApprovalNotes(e.target.value)}
+                              placeholder="Add notes for the admin reviewer (optional)..."
+                              rows={3}
+                              className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active resize-none"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  setShowNotesInput(false);
+                                  setApprovalNotes("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                disabled={approvalState === "submitting"}
+                                onClick={() => {
+                                  setApprovalState("submitting");
+                                  submitForApproval(rec.id, approvalNotes.trim() || null, msal)
+                                    .then(() => setApprovalState("submitted"))
+                                    .catch(() => setApprovalState("error"));
+                                }}
+                              >
+                                {approvalState === "submitting"
+                                  ? "Submitting..."
+                                  : "Send for Approval"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {approvalState === "error" && (
+                          <p className="text-xs text-red-600">
+                            Failed to submit. Please try again.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

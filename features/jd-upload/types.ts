@@ -111,6 +111,7 @@ export interface PricingRecommendation {
   markupPct: string;
   confidenceScore: number;
   status: string;
+  submissionStatus: string;
   contributingSignals: ContributingSignal[];
   marketDataUnavailable: boolean;
   rateCardApplied: boolean;

@@ -69,6 +69,7 @@ interface RawRecommendation {
   markup_pct: string;
   confidence_score: number;
   status: string;
+  submission_status?: string;
   contributing_signals?: RawContributingSignal[];
   market_data_unavailable: boolean;
   rate_card_applied: boolean;
@@ -123,6 +124,7 @@ function mapRecommendation(raw: RawRecommendation): PricingRecommendation {
     markupPct: raw.markup_pct,
     confidenceScore: raw.confidence_score,
     status: raw.status,
+    submissionStatus: raw.submission_status ?? "draft",
     contributingSignals: (raw.contributing_signals ?? []).map(
       (signal): ContributingSignal => ({
         signalType: signal.signal_type,
@@ -227,6 +229,7 @@ export async function findRecommendationByJdId(
       markupPct: "32.5",
       confidenceScore: 0.87,
       status: "pending",
+      submissionStatus: "pending_approval",
       contributingSignals: [
         {
           signalType: "market_data",
@@ -270,4 +273,23 @@ export async function priceJd(
     msal,
   });
   return { jdId: res.jd_id, status: res.status };
+}
+
+export async function submitForApproval(
+  recId: string,
+  notes: string | null,
+  msal?: MsalTokenContext,
+): Promise<{ approvalId: string; status: string }> {
+  if (IS_MOCK) {
+    return { approvalId: crypto.randomUUID(), status: "pending_approval" };
+  }
+  const res = await apiFetch<{ approval_id: string; status: string }>(
+    `/v1/recommendations/${recId}/submit`,
+    {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+      msal,
+    },
+  );
+  return { approvalId: res.approval_id, status: res.status };
 }

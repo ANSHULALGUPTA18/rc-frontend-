@@ -87,6 +87,23 @@ export function JdUploadView({ onContinue }: JdUploadViewProps): React.ReactElem
     setPasteCount((c) => c + 1);
   }, [pastedText, pasteCount, addFiles]);
 
+  const hasPendingText = pastedText.trim().length > 0;
+  const canProceed = canContinue || hasPendingText;
+
+  const handleContinue = useCallback(() => {
+    let currentFiles = files;
+    if (hasPendingText) {
+      const file = textToFile(pastedText.trim(), pasteCount + 1);
+      addFiles([file]);
+      setPastedText("");
+      setPasteCount((c) => c + 1);
+      currentFiles = [...files, { id: crypto.randomUUID(), file }];
+    }
+    if (currentFiles.length > 0) {
+      onContinue?.(currentFiles);
+    }
+  }, [files, hasPendingText, pastedText, pasteCount, addFiles, onContinue]);
+
   return (
     <AppShell>
       <header className="space-y-6">
@@ -202,7 +219,7 @@ export function JdUploadView({ onContinue }: JdUploadViewProps): React.ReactElem
             </CardContent>
           </Card>
 
-          <Button size="lg" disabled={!canContinue} onClick={() => onContinue?.(files)}>
+          <Button size="lg" disabled={!canProceed} onClick={handleContinue}>
             Continue
             <svg
               viewBox="0 0 24 24"

@@ -1,16 +1,12 @@
 "use client";
 
-/**
- * TopBar — global authenticated header.
- *
- * Rendered by AppShell on every protected page so the user's name, avatar,
- * and sign-out option are always visible regardless of which page they're on.
- * Reads user info from AuthContext — no props needed.
- */
-
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { apiFetch } from "@/lib/api/client";
+import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
+import { cn } from "@/lib/utils/cn";
 
 function getInitials(name: string): string {
   return name
@@ -79,6 +75,37 @@ function LogoutIcon(): React.ReactElement {
   );
 }
 
+function BellIcon(): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-5 w-5"
+    >
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+}
+
+interface NotificationsResponse {
+  items: NotificationItem[];
+  unread_count: number;
+}
+
 function ChevronIcon({ open }: { open: boolean }): React.ReactElement {
   return (
     <svg
@@ -100,8 +127,25 @@ function ChevronIcon({ open }: { open: boolean }): React.ReactElement {
 
 export function TopBar(): React.ReactElement {
   const { user, logout } = useAuth();
+  const msal = useMsalTokenContext();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  const { data: notifications } = useQuery<NotificationsResponse>({
+    queryKey: ["notifications"],
+    queryFn: () => apiFetch<NotificationsResponse>("/v1/notifications", { msal }),
+    refetchInterval: 15000,
+  });
+
+  const unreadCount = notifications?.unread_count ?? 0;
+
+  const handleMarkRead = async (id: string): Promise<void> => {
+    await apiFetch(`/v1/notifications/${id}/read`, { method: "POST", msal });
+    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -115,11 +159,26 @@ export function TopBar(): React.ReactElement {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // Close bell dropdown on outside click
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handler = (e: MouseEvent): void => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [bellOpen]);
+
   // Close on Escape
   useEffect(() => {
-    if (!open) return;
+    if (!open && !bellOpen) return;
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setBellOpen(false);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -130,7 +189,67 @@ export function TopBar(): React.ReactElement {
   const initials = getInitials(displayName);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-end border-b border-line bg-surface px-6">
+    <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-line bg-surface px-6">
+      {/* Bell icon */}
+      <div ref={bellRef} className="relative">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={() => setBellOpen((v) => !v)}
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink"
+        >
+          <BellIcon />
+          {unreadCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {bellOpen && (
+          <div className="absolute right-0 top-11 z-30 w-80 rounded-xl border border-line bg-surface shadow-lg">
+            <div className="border-b border-line px-4 py-3">
+              <h3 className="text-sm font-bold text-ink">Notifications</h3>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {!notifications?.items || notifications.items.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-ink-muted">
+                  No notifications yet
+                </div>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {notifications.items.map((n) => (
+                    <li
+                      key={n.id}
+                      className={cn(
+                        "px-4 py-3 transition-colors hover:bg-surface-muted cursor-pointer",
+                        !n.read && "bg-blue-50/50",
+                      )}
+                      onClick={() => {
+                        if (!n.read) void handleMarkRead(n.id);
+                      }}
+                    >
+                      <div className="flex items-start gap-2">
+                        {!n.read && (
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-ink">{n.title}</p>
+                          <p className="mt-0.5 text-xs text-ink-muted line-clamp-2">{n.message}</p>
+                          <p className="mt-1 text-[10px] text-ink-subtle">
+                            {new Date(n.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div ref={ref} className="relative">
         {/* Trigger button */}
         <button

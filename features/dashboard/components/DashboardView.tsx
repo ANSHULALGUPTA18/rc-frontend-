@@ -1,14 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
+import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import {
   getKpiStats,
   getApprovals,
   getReports,
+  approveRecommendation,
+  rejectRecommendation,
   type KpiStats,
   type ApprovalRow,
   type ReportItem,
@@ -209,25 +213,39 @@ function OptimalBadge(): React.ReactElement {
   );
 }
 
-function StatusButton({ status }: { status: "approved" | "pending" }): React.ReactElement {
+function StatusBadge({ status }: { status: "approved" | "pending" }): React.ReactElement {
   if (status === "approved") {
     return (
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white"
-      >
+      <span className="flex items-center gap-1.5 rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-white">
         <CheckUserIcon />
         Approved
-      </button>
+      </span>
     );
   }
   return (
-    <button
-      type="button"
-      className="flex items-center gap-1.5 rounded-lg bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink-muted"
-    >
+    <span className="flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-700">
       <ClockIcon />
       Pending
+    </span>
+  );
+}
+
+function ApproveButton({
+  onClick,
+  loading,
+}: {
+  onClick: () => void;
+  loading: boolean;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={onClick}
+      className="flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
+    >
+      <CheckUserIcon />
+      {loading ? "..." : "Approve"}
     </button>
   );
 }
@@ -237,6 +255,11 @@ function StatusButton({ status }: { status: "approved" | "pending" }): React.Rea
 export function DashboardView(): React.ReactElement {
   const router = useRouter();
   const msal = useMsalTokenContext();
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+  const isAdmin = currentUser?.role === "ADMIN";
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
   const {
     data: kpi,
     isLoading: kpiLoading,
@@ -254,6 +277,19 @@ export function DashboardView(): React.ReactElement {
     error: reportsError,
     refetch: refetchReports,
   } = useQuery({ queryKey: ["reports"], queryFn: getReports });
+
+  const handleApprove = async (recId: string): Promise<void> => {
+    setApprovingId(recId);
+    try {
+      await approveRecommendation(recId, msal);
+      void queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      void queryClient.invalidateQueries({ queryKey: ["kpi"] });
+    } catch {
+      // Error handling — could add toast notification
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   return (
     <AppShell>
@@ -353,6 +389,11 @@ export function DashboardView(): React.ReactElement {
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
                       JD ID
                     </th>
+                    {isAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
+                        Submitted By
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-sidebar-active">
                       Pay / Bill Rate
                     </th>
@@ -375,6 +416,22 @@ export function DashboardView(): React.ReactElement {
                           Markup {row.markupPct}%
                         </span>
                       </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4">
+                          {row.submittedByName ? (
+                            <>
+                              <span className="block text-sm font-medium text-ink">
+                                {row.submittedByName}
+                              </span>
+                              <span className="block text-xs text-ink-muted">
+                                {row.submittedByEmail}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-ink-subtle">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <span className="block font-medium text-ink">{row.payRateRange}</span>
                         <span className="block text-xs text-ink-muted">{row.billRateRange}</span>
@@ -384,7 +441,14 @@ export function DashboardView(): React.ReactElement {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <StatusButton status={row.status} />
+                          {isAdmin && row.status === "pending" ? (
+                            <ApproveButton
+                              onClick={() => void handleApprove(row.id)}
+                              loading={approvingId === row.id}
+                            />
+                          ) : (
+                            <StatusBadge status={row.status} />
+                          )}
                           <button
                             type="button"
                             aria-label="More options"

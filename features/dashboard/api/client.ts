@@ -31,6 +31,8 @@ export interface ApprovalRow {
   markupPct: string;
   aiConfidence: number;
   status: "approved" | "pending";
+  submittedByName: string | null;
+  submittedByEmail: string | null;
 }
 
 export interface ReportItem {
@@ -52,6 +54,8 @@ interface RawRecommendation {
   markup_pct: string;
   confidence_score: number;
   status: string;
+  submitted_by_name?: string | null;
+  submitted_by_email?: string | null;
 }
 
 interface ReviewQueueResponse {
@@ -74,6 +78,8 @@ function mapApprovalRow(raw: RawRecommendation): ApprovalRow {
     markupPct: parseFloat(raw.markup_pct).toFixed(1),
     aiConfidence: Math.round(raw.confidence_score * 100),
     status: raw.status === "pending" ? "pending" : "approved",
+    submittedByName: raw.submitted_by_name ?? null,
+    submittedByEmail: raw.submitted_by_email ?? null,
   };
 }
 
@@ -98,6 +104,8 @@ const MOCK_APPROVALS: ApprovalRow[] = [
     markupPct: "32.5",
     aiConfidence: 94,
     status: "approved",
+    submittedByName: "Anshu G",
+    submittedByEmail: "anshu.g@techgene.com",
   },
   {
     id: "2",
@@ -107,6 +115,8 @@ const MOCK_APPROVALS: ApprovalRow[] = [
     markupPct: "32.5",
     aiConfidence: 94,
     status: "pending",
+    submittedByName: "Anshu G",
+    submittedByEmail: "anshu.g@techgene.com",
   },
   {
     id: "3",
@@ -116,24 +126,8 @@ const MOCK_APPROVALS: ApprovalRow[] = [
     markupPct: "32.5",
     aiConfidence: 94,
     status: "pending",
-  },
-  {
-    id: "4",
-    jdId: "jd-8824",
-    payRateRange: "$60.00 - $70.00/hr",
-    billRateRange: "$145.00 - $155.00/hr",
-    markupPct: "32.5",
-    aiConfidence: 94,
-    status: "pending",
-  },
-  {
-    id: "5",
-    jdId: "jd-8825",
-    payRateRange: "$60.00 - $70.00/hr",
-    billRateRange: "$145.00 - $155.00/hr",
-    markupPct: "32.5",
-    aiConfidence: 94,
-    status: "pending",
+    submittedByName: null,
+    submittedByEmail: null,
   },
 ];
 
@@ -182,4 +176,24 @@ export async function getApprovals(msal?: MsalTokenContext): Promise<ApprovalRow
 export async function getReports(): Promise<ReportItem[]> {
   if (IS_MOCK) return MOCK_REPORTS;
   return [];
+}
+
+export async function approveRecommendation(recId: string, msal?: MsalTokenContext): Promise<void> {
+  await apiFetch(`/v1/recommendations/${recId}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ action: "approved" }),
+    msal,
+  });
+}
+
+export async function rejectRecommendation(
+  recId: string,
+  comments: string,
+  msal?: MsalTokenContext,
+): Promise<void> {
+  await apiFetch(`/v1/recommendations/${recId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ action: "rejected", comments }),
+    msal,
+  });
 }
