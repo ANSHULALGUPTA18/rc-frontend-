@@ -21,7 +21,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps): React.ReactElement {
   return (
-    <div className="flex min-h-screen bg-surface-subtle">
+    <div className="flex h-screen overflow-hidden bg-surface-subtle">
       <WorkshopSidebar />
 
       <div className="flex flex-1 flex-col overflow-hidden">

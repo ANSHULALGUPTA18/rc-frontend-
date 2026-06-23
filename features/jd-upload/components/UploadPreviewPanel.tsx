@@ -52,8 +52,8 @@ export function UploadPreviewPanel({
     <section
       aria-label="Uploaded document preview"
       className={cn(
-        "rounded-card border border-line bg-surface shadow-card",
-        files.length === 0 ? "flex" : "",
+        "w-full rounded-card border border-line bg-surface shadow-card",
+        files.length === 0 ? "flex items-center justify-center" : "",
       )}
     >
       {files.length === 0 ? (

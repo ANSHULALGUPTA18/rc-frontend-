@@ -1,35 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
-import { AppShell } from "@/components/layout/AppShell";
+import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
 import type { ResolvedPromptConfig, SelectedJdFile, SubmittedJd } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
-  {
-    id: "1",
-    name: "Prompt_1",
-    content:
-      "Please provide the public sector hourly pay rate of this position.",
-  },
-  {
-    id: "2",
-    name: "analysis_v2",
-    content:
-      "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD.",
-  },
-  {
-    id: "3",
-    name: "extraction_v3",
-    content:
-      "Extract all role-specific compensation data, including base salary bands, bonus structures, and equity components for this position.",
-  },
+  { id: "1", name: "Public Sector Rate", content: "Please provide the public sector hourly pay rate of this position." },
+  { id: "2", name: "Market Rate Analysis", content: "Analyse the market rate for this role based on skills, experience, location, and industry sector." },
+  { id: "3", name: "Compensation Extraction", content: "Extract all role-specific compensation data for this position." },
 ];
 
 type PromptMode = "default" | "custom";
@@ -169,32 +155,31 @@ export function PromptSelectionView({
     cfg?.promptMode === "custom" ? cfg.customContent : activeTpl.content;
 
   return (
-    <AppShell>
-      <div className="flex flex-1 flex-col">
-        <header className="space-y-6">
+    <div className="flex h-screen overflow-hidden bg-surface-subtle">
+      <WorkshopSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar />
+
+        {/* Fixed header */}
+        <div className="shrink-0 px-6 pt-8 pb-4 lg:px-10">
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
-          <div className="space-y-3">
+          <div className="mt-4 space-y-3">
             <h2 className="text-lg font-bold text-ink">Stages</h2>
             <WorkshopStages activeStage="prompt-selection" />
           </div>
-        </header>
+        </div>
 
-        <div className="mt-6 flex flex-1 gap-6">
-          {/* Queue panel */}
-          <div className="flex w-72 shrink-0 flex-col gap-3">
+        {/* Content area — no page scroll */}
+        <div className="flex min-h-0 flex-1 gap-6 px-6 pb-10 lg:px-10">
+          {/* Queue panel — compact */}
+          <div className="flex w-72 shrink-0 flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Queue ({files.length})
               </span>
-              <button
-                type="button"
-                className="text-xs font-semibold text-sidebar-active hover:underline"
-              >
-                + Add New
-              </button>
             </div>
 
-            <ul className="space-y-3">
+            <ul className="flex-1 min-h-0 overflow-y-auto space-y-2">
               {files.map((f) => {
                 const isActive = f.id === selectedId;
                 return (
@@ -203,17 +188,17 @@ export function PromptSelectionView({
                       type="button"
                       onClick={() => setSelectedId(f.id)}
                       className={cn(
-                        "w-full rounded-card border bg-surface px-4 py-4 text-left shadow-card transition-colors",
+                        "w-full rounded-lg border bg-surface px-3 py-3 text-left transition-colors",
                         isActive
                           ? "border-l-4 border-sidebar-active"
                           : "border-line hover:border-sidebar-active/40",
                       )}
                     >
-                      <span className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                      <span className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50">
                           <DocumentIcon />
                         </span>
-                        <span className="min-w-0">
+                        <span className="min-w-0 flex-1">
                           <span
                             className={cn(
                               "block truncate text-sm font-semibold",
@@ -221,9 +206,6 @@ export function PromptSelectionView({
                             )}
                           >
                             {stripExtension(f.file.name)}
-                          </span>
-                          <span className="block truncate text-xs text-ink-subtle">
-                            {f.file.name}
                           </span>
                         </span>
                       </span>
@@ -233,7 +215,7 @@ export function PromptSelectionView({
               })}
             </ul>
 
-            <div className="mt-auto pt-4">
+            <div className="shrink-0 pt-3">
               <Button variant="secondary" size="md" onClick={onBack}>
                 ← Back
               </Button>
@@ -242,12 +224,12 @@ export function PromptSelectionView({
 
           {/* Config panel */}
           {selected && cfg ? (
-            <div className="flex flex-1 flex-col gap-6">
+            <div className="flex flex-1 flex-col gap-4 min-h-0">
               <h2 className="text-2xl font-bold text-sidebar">
                 {stripExtension(selected.file.name)}
               </h2>
 
-              <div className="rounded-card border border-line bg-surface p-6 shadow-card">
+              <div className="flex-1 min-h-0 overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-card">
                 {/* Header row */}
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <span className="text-sm font-semibold text-ink">
@@ -363,11 +345,11 @@ export function PromptSelectionView({
                   </div>
                 )}
 
-                {/* Location + Sector */}
+                {/* Location + Sector (mandatory) */}
                 <div className="mt-5 grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-ink">
-                      Location
+                      Location <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -376,12 +358,20 @@ export function PromptSelectionView({
                         patchConfig(selected.id, { location: e.target.value })
                       }
                       placeholder="Enter Location Here"
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
+                      className={cn(
+                        "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
+                        !cfg.location.trim()
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-300"
+                          : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                      )}
                     />
+                    {!cfg.location.trim() && (
+                      <p className="text-xs text-red-500">Location is required</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-sm font-medium text-ink">
-                      Sector
+                      Sector <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -389,17 +379,37 @@ export function PromptSelectionView({
                       onChange={(e) =>
                         patchConfig(selected.id, { sector: e.target.value })
                       }
-                      placeholder="Public Sector"
-                      className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
+                      placeholder="e.g. Healthcare, Finance, Technology"
+                      className={cn(
+                        "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
+                        !cfg.sector.trim()
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-300"
+                          : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                      )}
                     />
+                    {!cfg.sector.trim() && (
+                      <p className="text-xs text-red-500">Sector is required</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-auto">
+              <div className="shrink-0 pt-2">
                 <Button
                   size="lg"
                   onClick={() => {
+                    // Validate all files have location + sector
+                    const missing: string[] = [];
+                    for (const f of files) {
+                      const c = configs[f.id] ?? defaultConfig();
+                      if (!c.location.trim()) missing.push(`${stripExtension(f.file.name)}: Location`);
+                      if (!c.sector.trim()) missing.push(`${stripExtension(f.file.name)}: Sector`);
+                    }
+                    if (missing.length > 0) {
+                      alert(`Please fill in the required fields:\n\n${missing.join("\n")}`);
+                      return;
+                    }
+
                     const resolved: Record<string, ResolvedPromptConfig> = {};
                     for (const f of files) {
                       const cfg = configs[f.id] ?? defaultConfig();
@@ -421,6 +431,6 @@ export function PromptSelectionView({
           ) : null}
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

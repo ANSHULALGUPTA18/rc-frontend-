@@ -3,7 +3,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { AppShell } from "@/components/layout/AppShell";
+import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
@@ -113,18 +114,17 @@ function FileIcon({ type }: { type: string }): React.ReactElement {
 interface KpiCardProps {
   label: string;
   value: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   subtext: React.ReactNode;
 }
 
-function KpiCard({ label, value, icon, subtext }: KpiCardProps): React.ReactElement {
+function KpiCard({ label, value, subtext }: KpiCardProps): React.ReactElement {
   return (
     <div className="rounded-card border border-line bg-surface p-5 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
           {label}
         </span>
-        <span className="text-ink-subtle">{icon}</span>
       </div>
       <p className="mt-2 text-3xl font-bold text-ink">{value}</p>
       <div className="mt-1">{subtext}</div>
@@ -184,6 +184,8 @@ export function DashboardView(): React.ReactElement {
   const { data: currentUser } = useCurrentUser();
   const isAdmin = currentUser?.role === "ADMIN";
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 2;
 
   const { data: kpi, isLoading: kpiLoading, error: kpiError } = useQuery({ queryKey: ["kpi"], queryFn: () => getKpiStats(msal) });
   const { data: approvals = [], isLoading: approvalsLoading, error: approvalsError, refetch: refetchApprovals } = useQuery({ queryKey: ["approvals"], queryFn: () => getApprovals(msal) });
@@ -203,54 +205,60 @@ export function DashboardView(): React.ReactElement {
   };
 
   return (
-    <AppShell>
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-ink">Dashboard</h1>
-          <button
-            type="button"
-            onClick={() => router.push("/jd/upload")}
-            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-          >
-            <PlusIcon />
-            New Pricing Request
-          </button>
-        </div>
+    <div className="flex h-screen overflow-hidden bg-surface-subtle">
+      <WorkshopSidebar />
 
-        {/* KPI cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar />
+
+        {/* Fixed header + KPI section — does NOT scroll */}
+        <div className="shrink-0 border-b border-line bg-surface-subtle px-6 pb-6 pt-8 lg:px-10">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-ink">Dashboard</h1>
+            <button
+              type="button"
+              onClick={() => router.push("/jd-upload")}
+              className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            >
+              <PlusIcon />
+              New Pricing Request
+            </button>
+          </div>
+
+          {/* KPI cards */}
+          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {kpiLoading && <div className="col-span-4"><LoadingSpinner /></div>}
           {kpiError  && <div className="col-span-4"><ErrorState message="Failed to load stats." /></div>}
           {kpi && <>
           <KpiCard
             label="Active Requests"
             value={kpi.activeRequests.toLocaleString()}
-            icon={<ListIcon />}
             subtext={<AccurateBadge text={kpi.activeRequestsTrend} />}
           />
           <KpiCard
             label="Pending Approvals"
             value={kpi.pendingApprovals.toLocaleString()}
-            icon={<ListIcon />}
             subtext={<AccurateBadge text={kpi.pendingApprovalsTrend} />}
           />
           <KpiCard
             label="Completed"
             value={kpi.recentPricingReports.toLocaleString()}
-            icon={<RefreshIcon />}
             subtext={<AccurateBadge text={kpi.accuracyRate} />}
           />
           <KpiCard
             label="Avg Margin"
             value={kpi.avgMargin}
-            icon={<PieIcon />}
             subtext={<OptimalBadge />}
           />
           </>}
         </div>
+        </div>
 
+        {/* Scrollable content area */}
+        <main className="flex-1 px-6 py-6 lg:px-10">
         {/* Main content */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
 
           {/* Pending Approvals */}
           <div className="rounded-card border border-line bg-surface shadow-card">
@@ -268,15 +276,19 @@ export function DashboardView(): React.ReactElement {
                 No pricing requests yet.{" "}
                 <button
                   type="button"
-                  onClick={() => router.push("/jd/upload")}
+                  onClick={() => router.push("/jd-upload")}
                   className="font-medium text-sidebar-active hover:underline"
                 >
                   Upload a JD to get started.
                 </button>
               </div>
             )}
-            {!approvalsLoading && !approvalsError && approvals.length > 0 && (
-            <div className="overflow-x-auto">
+            {!approvalsLoading && !approvalsError && approvals.length > 0 && (() => {
+              const totalPages = Math.ceil(approvals.length / PAGE_SIZE);
+              const startIdx = (page - 1) * PAGE_SIZE;
+              const pageRows = approvals.slice(startIdx, startIdx + PAGE_SIZE);
+              return (
+            <div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line">
@@ -300,7 +312,7 @@ export function DashboardView(): React.ReactElement {
                   </tr>
                 </thead>
                 <tbody>
-                  {approvals.map((row) => (
+                  {pageRows.map((row) => (
                     <tr key={row.id} className="border-b border-line last:border-0">
                       <td className="px-6 py-4 font-medium text-ink">
                         <span className="block truncate font-mono text-xs text-ink">{row.jdId}</span>
@@ -349,28 +361,36 @@ export function DashboardView(): React.ReactElement {
                 </tbody>
               </table>
             </div>
-            )}
+            );
+            })()}
 
             <div className="flex items-center justify-between border-t border-line px-6 py-3">
               <span className="text-xs text-ink-muted">
                 {approvals.length === 0
                   ? "No results"
-                  : `Showing ${approvals.length} recommendation${approvals.length === 1 ? "" : "s"}`}
+                  : `Showing ${Math.min((page - 1) * PAGE_SIZE + 1, approvals.length)}-${Math.min(page * PAGE_SIZE, approvals.length)} of ${approvals.length}`}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   aria-label="Previous page"
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-subtle hover:bg-surface-muted"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-subtle hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="h-3.5 w-3.5">
                     <path d="m15 18-6-6 6-6" />
                   </svg>
                 </button>
+                <span className="px-2 text-xs text-ink-muted">
+                  {page} / {Math.max(1, Math.ceil(approvals.length / PAGE_SIZE))}
+                </span>
                 <button
                   type="button"
                   aria-label="Next page"
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-subtle hover:bg-surface-muted"
+                  disabled={page >= Math.ceil(approvals.length / PAGE_SIZE)}
+                  onClick={() => setPage((p) => Math.min(Math.ceil(approvals.length / PAGE_SIZE), p + 1))}
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line text-ink-subtle hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="h-3.5 w-3.5">
                     <path d="m9 18 6-6-6-6" />
@@ -418,6 +438,8 @@ export function DashboardView(): React.ReactElement {
             )}
           </div>
         </div>
-    </AppShell>
+        </main>
+      </div>
+    </div>
   );
 }

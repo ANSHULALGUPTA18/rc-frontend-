@@ -49,6 +49,14 @@ export const MOCK_TEMPLATES: PromptTemplate[] = [
 // ─── API functions ────────────────────────────────────────────────────────────
 
 export async function getPromptTemplates(): Promise<PromptTemplate[]> {
+  if (typeof window !== "undefined") {
+    const { getPrompts } = await import("@/lib/prompts/prompt-store");
+    const stored = getPrompts();
+    return stored.map((p) => ({
+      id: p.id, name: p.name, content: p.content,
+      isDefault: false, usedInCampaigns: 0, editedAt: new Date(),
+    }));
+  }
   return MOCK_TEMPLATES;
 }
 
@@ -56,11 +64,19 @@ export async function createPromptTemplate(
   name: string,
   content: string,
 ): Promise<PromptTemplate> {
+  if (typeof window !== "undefined") {
+    const { addPrompt } = await import("@/lib/prompts/prompt-store");
+    const p = addPrompt(name, content);
+    return { id: p.id, name: p.name, content: p.content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
+  }
   return { id: crypto.randomUUID(), name, content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
 }
 
-export async function deletePromptTemplate(_id: string): Promise<void> {
-  return;
+export async function deletePromptTemplate(id: string): Promise<void> {
+  if (typeof window !== "undefined") {
+    const { deletePrompt } = await import("@/lib/prompts/prompt-store");
+    deletePrompt(id);
+  }
 }
 
 export async function setDefaultPromptTemplate(_id: string): Promise<void> {

@@ -17,9 +17,12 @@ import {
   type SelectedJdFile,
 } from "@/features/jd-upload/types";
 
+const MAX_JD_FILES = 5;
+
 interface UseJdUploadResult {
   files: SelectedJdFile[];
   canContinue: boolean;
+  isFull: boolean;
   addFiles: (incoming: File[]) => void;
   removeFile: (id: string) => void;
   clear: () => void;
@@ -40,9 +43,11 @@ export function useJdUpload(): UseJdUploadResult {
 
   const addFiles = useCallback((incoming: File[]) => {
     setFiles((current) => {
-      const accepted = incoming.filter(
-        (file) => file.size <= MAX_JD_FILE_BYTES && !isDuplicate(current, file),
-      );
+      const remaining = MAX_JD_FILES - current.length;
+      if (remaining <= 0) return current;
+      const accepted = incoming
+        .filter((file) => file.size <= MAX_JD_FILE_BYTES && !isDuplicate(current, file))
+        .slice(0, remaining);
       if (accepted.length === 0) return current;
       return [...current, ...accepted.map((file) => ({ id: createId(), file }))];
     });
@@ -57,6 +62,7 @@ export function useJdUpload(): UseJdUploadResult {
   return {
     files,
     canContinue: files.length > 0,
+    isFull: files.length >= MAX_JD_FILES,
     addFiles,
     removeFile,
     clear,

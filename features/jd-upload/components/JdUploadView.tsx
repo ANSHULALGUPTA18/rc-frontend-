@@ -17,7 +17,8 @@ import {
 } from "@/features/jd-upload/types";
 import { UploadPreviewPanel } from "@/features/jd-upload/components/UploadPreviewPanel";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
-import { AppShell } from "@/components/layout/AppShell";
+import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import { cn } from "@/lib/utils/cn";
 
 interface JdUploadViewProps {
@@ -84,7 +85,7 @@ function TabButton({
 export function JdUploadView({
   onContinue,
 }: JdUploadViewProps): React.ReactElement {
-  const { files, canContinue, addFiles, removeFile, clear } = useJdUpload();
+  const { files, canContinue, isFull, addFiles, removeFile, clear } = useJdUpload();
   const [activeTab, setActiveTab] = useState<InputTab>("file");
   const [pastedText, setPastedText] = useState("");
   const [pasteCount, setPasteCount] = useState(0);
@@ -116,18 +117,25 @@ export function JdUploadView({
   }, [files, hasPendingText, pastedText, pasteCount, addFiles, onContinue]);
 
   return (
-    <AppShell>
-        <header className="space-y-6">
+    <div className="flex h-screen overflow-hidden bg-surface-subtle">
+      <WorkshopSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar />
+
+        {/* Fixed header */}
+        <div className="shrink-0 px-6 pt-8 pb-4 lg:px-10">
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
-          <div className="space-y-3">
+          <div className="mt-4 space-y-3">
             <h2 className="text-lg font-bold text-ink">Stages</h2>
             <WorkshopStages activeStage="upload" />
           </div>
-        </header>
+        </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="flex flex-col gap-4">
-            <Card>
+        {/* Content — no page scroll */}
+        <div className="flex min-h-0 flex-1 gap-6 px-6 pb-6 lg:px-10">
+          <div className="flex flex-1 flex-col gap-4 min-h-0">
+            <Card className="flex-1 min-h-0 overflow-y-auto">
+              {!isFull && (
               <CardHeader>
                 <CardTitle>Add Job Descriptions</CardTitle>
                 <CardDescription>
@@ -135,7 +143,14 @@ export function JdUploadView({
                   emails. Our AI will analyze each role independently.
                 </CardDescription>
               </CardHeader>
+              )}
               <CardContent className="space-y-4">
+                {isFull ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    Maximum 5 JDs allowed per upload. Ready to continue.
+                  </div>
+                ) : (
+                <>
                 {/* Tab switcher */}
                 <div className="flex gap-1 border-b border-line">
                   <TabButton active={activeTab === "file"} onClick={() => setActiveTab("file")}>
@@ -146,18 +161,16 @@ export function JdUploadView({
                   </TabButton>
                 </div>
 
-                {/* File upload tab */}
                 {activeTab === "file" && (
                   <FileUpload
                     multiple
                     accept={ACCEPTED_JD_MIME}
                     title="Click or drag & drop multiple files"
-                    hint="Supports PDF, DOCX, TXT — Max 10MB each"
+                    hint={`Supports PDF, DOCX, TXT — Max 10MB each — ${files.length}/5 added`}
                     onFilesSelected={addFiles}
                   />
                 )}
 
-                {/* Paste text tab */}
                 {activeTab === "paste" && (
                   <div className="space-y-3">
                     <textarea
@@ -182,6 +195,9 @@ export function JdUploadView({
                       </Button>
                     </div>
                   </div>
+                )}
+
+                </>
                 )}
 
                 {/* File list (shown for both tabs) */}
@@ -228,6 +244,7 @@ export function JdUploadView({
               </CardContent>
             </Card>
 
+            <div className="shrink-0">
             <Button
               size="lg"
               disabled={!canProceed}
@@ -247,14 +264,18 @@ export function JdUploadView({
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </Button>
+            </div>
           </div>
 
-          <UploadPreviewPanel
-            files={files}
-            onRemove={removeFile}
-            onClear={clear}
-          />
+          <div className="flex flex-1 min-h-0">
+            <UploadPreviewPanel
+              files={files}
+              onRemove={removeFile}
+              onClear={clear}
+            />
+          </div>
         </div>
-    </AppShell>
+      </div>
+    </div>
   );
 }

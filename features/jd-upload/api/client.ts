@@ -234,6 +234,13 @@ export async function findRecommendationByJdId(
 }
 
 export async function getPromptOptions(): Promise<PromptTemplateOption[]> {
+  if (typeof window !== "undefined") {
+    const { getPrompts } = await import("@/lib/prompts/prompt-store");
+    const stored = getPrompts();
+    if (stored.length > 0) {
+      return stored.map((p) => ({ id: p.id, name: p.name, content: p.content }));
+    }
+  }
   return MOCK_PROMPT_OPTIONS;
 }
 
