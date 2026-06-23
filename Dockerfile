@@ -33,7 +33,9 @@ RUN --mount=type=cache,target=/app/.next/cache npm run build
 # ---- runner ----
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000
+# HOSTNAME=0.0.0.0 is required so the Next.js standalone server accepts
+# external connections inside the container (otherwise it can bind to localhost).
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

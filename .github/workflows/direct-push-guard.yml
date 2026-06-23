@@ -1,22 +1,71 @@
 name: direct-push-guard
 
-# Tripwire: alerts if someone pushes directly to a protected branch (bypassing PR review).
-# Until a Teams webhook secret exists, it just fails the run so the push is visible.
+# Tripwire: GitHub Free (private repos) can't ENFORCE "no direct pushes" via branch
+# protection. On any push to a protected branch this checks whether the commit
+# arrived through a Pull Request. If it did NOT (i.e. someone ran `git push` straight
+# to the branch) it sends a Teams alert and fails — making the violation visible.
+#
+# Merge, squash, and rebase merges are all associated with their PR by GitHub, so
+# they pass silently. Detection is pure bash (no jq/gh dependency on the runner).
 on:
   push:
     branches: [develop, staging, main]
 
+permissions:
+  contents: read
+
 jobs:
   guard:
+    name: Detect direct push (no PR)
     runs-on: [self-hosted, rcp-frontend]
+    # Skip branch-deletion push events (nothing to check).
+    if: github.event.deleted != true
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Detect non-PR push
-        if: ${{ !contains(github.event.head_commit.message, 'Merge pull request') }}
+      - name: Check the commit came from a Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
         run: |
-          MSG="⚠️ Direct push to ${{ github.ref_name }} by ${{ github.actor }} (no PR)"
-          echo "$MSG"
-          if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
-            curl -H 'Content-Type: application/json' \
-              -d "{\"text\":\"$MSG\"}" "${{ secrets.TEAMS_WEBHOOK_URL }}"
+          set -euo pipefail
+
+          # Ask GitHub which PRs are associated with the pushed commit.
+          RESP=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls")
+
+          # Compact the JSON (strip whitespace) so we can pattern-match it in
+          # pure bash — no jq/python dependency on the self-hosted runner.
+          COMPACT=$(printf '%s' "$RESP" | tr -d '[:space:]')
+
+          echo "Branch:  ${{ github.ref_name }}"
+          echo "Commit:  ${{ github.sha }}"
+          echo "Pusher:  ${{ github.actor }}"
+
+          case "$COMPACT" in
+            "[]")
+              echo "No associated PR — this looks like a direct push." ;;
+            \[*)
+              echo "OK — this commit came through a Pull Request."
+              exit 0 ;;
+            *)
+              echo "Inconclusive API response (not a JSON array) — skipping guard."
+              printf '%s' "$RESP" | head -c 300
+              echo ""
+              exit 0 ;;
+          esac
+
+          echo "::error::Direct push detected to ${{ github.ref_name }} (no associated PR)."
+
+          # Alert the team (best-effort — don't let a webhook hiccup hide the failure).
+          if [ -n "${TEAMS_WEBHOOK_URL:-}" ]; then
+            curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF4444\",\"summary\":\"Direct push detected\",\"text\":\"🚫 **Direct push to \`${{ github.ref_name }}\`** by **${{ github.actor }}** — no Pull Request. Please use a PR.<br>Commit: ${{ github.sha }}<br>[View](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})\"}" || true
           fi
+
+          # Fail so it shows as a red check on the branch (the tripwire).
           exit 1
