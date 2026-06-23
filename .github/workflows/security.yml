@@ -1,8 +1,12 @@
 name: security
 
-# Parallel, mostly non-blocking security track. Runs on PRs and nightly.
-# Secret scan + container/filesystem scan block on CRITICAL once the baseline is clean;
-# dependency audit is report-only.
+# Parallel security track on PRs + nightly. Each scanner is its own job so they
+# run concurrently (matches the lead-generator / bench-sales house style).
+#
+# Scanners run via pinned Docker images on purpose:
+#   - the gitleaks-action wrapper needs a paid license for org repos (the binary is free)
+#   - trivy-action's pinned setup-trivy transitive dependency has broken tags
+# The images are self-contained and version-pinned; a named volume persists Trivy's DB.
 on:
   pull_request:
     branches: [develop, staging, main]
@@ -10,14 +14,16 @@ on:
     - cron: "0 2 * * *" # nightly 02:00 UTC
   workflow_dispatch:
 
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
-env:
-  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-
 jobs:
-  scan:
+  secret-scan:
+    name: Secret Scan
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 15
     steps:
@@ -25,22 +31,42 @@ jobs:
         with:
           fetch-depth: 0 # Gitleaks needs full history
 
-      # The gitleaks-action wrapper requires a paid license for org repos, but the
-      # gitleaks binary is free — run it via its Docker image instead.
       - name: Secret scan (Gitleaks)
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" \
             ghcr.io/gitleaks/gitleaks:v8.28.0 detect \
             --source=/repo --redact --no-banner --verbose
 
+  audit:
+    name: Audit
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # npm audit reads package-lock.json only — no npm ci needed. Report-only.
       - name: Dependency audit (report only)
         run: |
           echo "## npm audit (high+)" >> "$GITHUB_STEP_SUMMARY"
           npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
 
-      # Run Trivy via its Docker image rather than trivy-action: the action's
-      # pinned setup-trivy transitive dependency has broken tags. The image is
-      # self-contained and version-pinned; the named volume persists the vuln DB.
+  trivy:
+    name: Trivy
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # exit-code 0 = report-only for now. Flip to --exit-code 1 (and split a
+      # CRITICAL-only blocking pass) once the baseline is clean — see the other repos.
       - name: Trivy filesystem/dependency scan
         run: |
           docker run --rm \
@@ -54,8 +80,16 @@ jobs:
             --exit-code 0 \
             /repo
 
-      - name: Notify Teams on failure
-        if: failure() && env.TEAMS_WEBHOOK_URL != ''
+  notify:
+    name: Notify on failure
+    needs: [secret-scan, audit, trivy]
+    if: failure()
+    runs-on: [self-hosted, rcp-frontend]
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Notify Teams
+        if: env.TEAMS_WEBHOOK_URL != ''
         run: |
           curl -s -H 'Content-Type: application/json' \
             -d "{\"text\":\"🔒 Frontend security scan failed on ${{ github.ref_name }}\"}" \

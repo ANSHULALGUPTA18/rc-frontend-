@@ -1,7 +1,14 @@
 name: fast-checks
 
-# Fast feedback on every push to a feature branch. Non-blocking, lightweight.
-# Runs in mock mode, so no backend or Azure is required.
+# Fast feedback for developers BEFORE they open a PR.
+# Runs on every push to a feature branch (not the protected branches — those are
+# covered by deploy.yml on develop and the full gate by ci.yml on PRs).
+# Keep lightweight: lint + unit tests + build. The coverage gate and security
+# scans run on the PR (ci.yml / security.yml); e2e runs nightly + on-demand (e2e.yml).
+#
+# Speed: node_modules live in /opt/ci-cache/rc-pricing-frontend/node_modules —
+# restored via hardlinks (near-instant) when package-lock.json hasn't changed.
+# The Next.js build cache is persisted too, so incremental builds take seconds.
 on:
   push:
     branches-ignore: [develop, staging, main]
@@ -14,26 +21,150 @@ permissions:
   contents: read
 
 env:
-  NEXT_PUBLIC_USE_MOCK: "true"
+  NEXT_PUBLIC_USE_MOCK: "true" # mock mode: no backend needed
+  NODE_CACHE: /opt/ci-cache/rc-pricing-frontend
 
 jobs:
-  checks:
-    # Single self-hosted frontend runner. No runner yet? Use: runs-on: ubuntu-latest
+  lint:
+    name: Lint (fast)
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
 
-      - name: Lint
+      - name: ESLint
         run: npm run lint
 
-      - name: Unit tests
+  unit-test:
+    name: Unit Tests (fast)
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: Run unit tests
         run: npm run test
+        env:
+          CI: "true"
+          NEXT_TELEMETRY_DISABLED: "1"
+          NO_COLOR: "1"
+
+  build:
+    name: Build (fast)
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: Restore Next.js build cache
+        run: |
+          mkdir -p .next
+          cp -al "$NODE_CACHE/next-cache" .next/cache 2>/dev/null || true
+
+      - name: Next.js build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NO_COLOR: "1"
+
+      - name: Save Next.js build cache
+        if: success()
+        run: |
+          rm -rf "$NODE_CACHE/next-cache"
+          cp -r .next/cache "$NODE_CACHE/next-cache" 2>/dev/null || true

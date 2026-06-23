@@ -2,6 +2,8 @@ name: rollback
 
 # Manually roll a frontend Container App back by redeploying a previous image tag.
 # Image-based so it works regardless of single- vs multiple-revision mode.
+# Leave image_tag blank to list recent tags; provide one to roll back, then the
+# workflow verifies it with a health-wait + HTTP smoke before declaring success.
 #
 # DORMANT until Azure is wired up (set repo variable AZURE_ENABLED=true).
 
@@ -11,7 +13,7 @@ on:
       environment:
         description: Environment to roll back
         type: choice
-        options: [dev, staging, prod]
+        options: [development, staging, production]
         required: true
       image_tag:
         description: Image tag to redeploy (leave blank to list recent tags)
@@ -24,11 +26,16 @@ permissions:
 jobs:
   rollback:
     if: vars.AZURE_ENABLED == 'true'
+    name: Rollback — ${{ inputs.environment }}
     runs-on: [self-hosted, rcp-frontend]
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash
     env:
-      APP: ca-rcp-frontend-${{ inputs.environment }}
+      # GitHub Environment is development/staging/production; map to the Azure container app short code.
+      APP: ca-rcp-frontend-${{ inputs.environment == 'development' && 'dev' || (inputs.environment == 'production' && 'prod' || inputs.environment) }}
       RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
       IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/rc-pricing-frontend
       ACR_NAME: ${{ secrets.ACR_NAME }}
@@ -47,15 +54,57 @@ jobs:
             --orderby time_desc --top 20 -o table
           echo "Re-run this workflow with the chosen image_tag."
 
+      - name: Teams — rollback started
+        if: inputs.image_tag != '' && env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF8800\",\"summary\":\"Frontend rollback started\",\"text\":\"⏪ **RC Pricing Frontend** rollback to \`${{ inputs.image_tag }}\` on **${{ inputs.environment }}** triggered by ${{ github.actor }}\"}"
+
       - name: Redeploy chosen image
         if: inputs.image_tag != ''
         run: |
           echo "Redeploying $IMAGE:${{ inputs.image_tag }} to $APP"
-          az containerapp update -n "$APP" -g "$RG" --image "$IMAGE:${{ inputs.image_tag }}"
+          az containerapp update -n "$APP" -g "$RG" \
+            --image "$IMAGE:${{ inputs.image_tag }}" \
+            --revision-suffix "rollback-$(date +%s)"
 
-      - name: Notify Teams
-        if: inputs.image_tag != '' && env.TEAMS_WEBHOOK_URL != ''
+      - name: Wait for revision to be healthy
+        if: inputs.image_tag != ''
         run: |
-          curl -s -H 'Content-Type: application/json' \
-            -d "{\"text\":\"⏪ Frontend ${{ inputs.environment }} rolled back to ${{ inputs.image_tag }} by ${{ github.actor }}\"}" \
-            "$TEAMS_WEBHOOK_URL"
+          REVISION=$(az containerapp revision list -n "$APP" -g "$RG" \
+            --query "sort_by([], &properties.createdTime)[-1].name" -o tsv)
+          echo "Polling revision: $REVISION"
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp revision show -n "$APP" -g "$RG" \
+              --revision "$REVISION" --query "properties.healthState" -o tsv 2>/dev/null || echo "Unknown")
+            echo "[$i/30] Health: $STATE"
+            [ "$STATE" = "Healthy" ] && exit 0
+            sleep 10
+          done
+          echo "Timeout: revision never became healthy"
+          exit 1
+
+      - name: HTTP smoke check after rollback
+        if: inputs.image_tag != ''
+        run: |
+          FQDN=$(az containerapp show -n "$APP" -g "$RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Probing https://$FQDN/"
+          for i in $(seq 1 12); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://$FQDN/" || true)
+            # 200, or a 3xx redirect to /login (unauthenticated), both mean the app is alive.
+            if echo "$CODE" | grep -qE '^(200|301|302|307|308)$'; then
+              echo "Smoke OK (HTTP $CODE)"; exit 0
+            fi
+            echo "attempt $i: HTTP $CODE — retrying"; sleep 10
+          done
+          echo "Smoke failed after rollback"; exit 1
+
+      - name: Teams — rollback result
+        if: always() && inputs.image_tag != '' && env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then ICON="✅"; COLOR="00C851"; else ICON="❌"; COLOR="FF4444"; fi
+          curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"$COLOR\",\"summary\":\"Frontend rollback ${{ job.status }}\",\"text\":\"$ICON **RC Pricing Frontend** rollback on **${{ inputs.environment }}** to \`${{ inputs.image_tag }}\` — ${{ job.status }}<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"

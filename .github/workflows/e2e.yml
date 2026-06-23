@@ -2,6 +2,11 @@ name: e2e
 
 # Playwright end-to-end tests. Nightly + on-demand (kept off the PR gate for speed).
 # Runs against the app in mock mode until a backend exists.
+#
+# Speed: node_modules are restored from /opt/ci-cache/rc-pricing-frontend via
+# hardlinks (npm ci only re-runs when package-lock.json changes), matching the
+# house style in ci.yml / fast-checks.yml. Playwright browsers are pre-installed
+# on the self-hosted runner; the install step below is a no-op safety net.
 on:
   schedule:
     - cron: "30 2 * * *" # nightly 02:30 UTC
@@ -12,27 +17,63 @@ on:
         required: false
         default: ""
 
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 env:
-  NEXT_PUBLIC_USE_MOCK: "true"
-  TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+  NEXT_PUBLIC_USE_MOCK: "true" # mock mode: no backend needed
+  NODE_CACHE: /opt/ci-cache/rc-pricing-frontend
 
 jobs:
   e2e:
+    name: Playwright e2e
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: "20"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: Restore Next.js build cache
+        run: |
+          mkdir -p .next
+          cp -al "$NODE_CACHE/next-cache" .next/cache 2>/dev/null || true
 
       - name: Ensure Playwright browsers (pre-installed on runner; no-op safety net)
         run: npx playwright install --with-deps
@@ -40,7 +81,15 @@ jobs:
       - name: Run Playwright tests
         run: npm run test:e2e -- --workers=4
         env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NO_COLOR: "1"
           PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+
+      - name: Save Next.js build cache
+        if: always()
+        run: |
+          rm -rf "$NODE_CACHE/next-cache"
+          cp -r .next/cache "$NODE_CACHE/next-cache" 2>/dev/null || true
 
       - name: Upload Playwright report
         if: always()

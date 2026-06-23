@@ -1,11 +1,15 @@
 name: deploy
 
-# Build -> push to ACR -> deploy Container App -> smoke test -> auto-rollback -> notify.
+# Build -> push to ACR -> deploy Container App -> wait healthy -> smoke -> auto-rollback -> notify.
 #
-# DORMANT until the Azure team delivers these secrets (see RCP_FRONTEND_AZURE_SETUP.md §7):
-#   repo:  AZURE_CREDENTIALS, ACR_NAME, ACR_LOGIN_SERVER, AZURE_RESOURCE_GROUP, TEAMS_WEBHOOK_URL
+# Multi-job pipeline mirroring the lead-generator / bench-sales house style:
+#   deploy -> smoke -> rollback-on-failure (only if deploy succeeded) -> notify (always).
+#
+# DORMANT until the Azure team delivers these secrets (see RCP_FRONTEND_AZURE_SETUP.md §7)
+# AND the repo variable AZURE_ENABLED=true is set:
+#   repo: AZURE_CREDENTIALS, ACR_NAME, ACR_LOGIN_SERVER, AZURE_RESOURCE_GROUP, TEAMS_WEBHOOK_URL
 #   env (dev/staging/prod): NEXT_PUBLIC_* values
-# Until a backend exists, set the env variable NEXT_PUBLIC_USE_MOCK=true on each GitHub Environment.
+# Until a backend exists, set NEXT_PUBLIC_USE_MOCK=true on each GitHub Environment.
 
 on:
   push:
@@ -15,32 +19,70 @@ on:
       environment:
         description: Target environment
         type: choice
-        options: [staging, prod]
+        options: [staging, production]
         required: true
 
+# Queue deploys — never cancel one mid-flight.
 concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false # never cancel a deploy mid-flight
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
   deploy:
+    name: Deploy
     # Skips entirely until Azure is wired up. Set repo variable AZURE_ENABLED=true to activate.
     if: vars.AZURE_ENABLED == 'true'
     runs-on: [self-hosted, rcp-frontend]
     timeout-minutes: 30
     # Resolves per-environment secrets/vars from the matching GitHub Environment.
-    environment: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
+    environment: ${{ github.event_name == 'push' && 'development' || inputs.environment }}
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      prev_tag: ${{ steps.prev.outputs.tag }}
+      deploy_env: ${{ steps.vars.outputs.deploy_env }}
+      app: ${{ steps.vars.outputs.app }}
+      fqdn: ${{ steps.health.outputs.fqdn }}
+      deployed: ${{ steps.deploy.outputs.done }}
     env:
-      ENV: ${{ github.event_name == 'push' && 'dev' || inputs.environment }}
-      APP: ca-rcp-frontend-${{ github.event_name == 'push' && 'dev' || inputs.environment }}
-      IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/rc-pricing-frontend
-      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
       TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set deploy variables
+        id: vars
+        run: |
+          # GitHub Environment is development/staging/production; the Azure container
+          # apps stay ca-rcp-frontend-{dev,staging,prod}, so map the full name -> short code.
+          ENV="${{ github.event_name == 'push' && 'dev' || (inputs.environment == 'production' && 'prod' || inputs.environment) }}"
+          # Full GitHub Environment name (development/staging/production) for downstream
+          # environment bindings + Teams display; ENV stays the Azure short code.
+          FULL_ENV="${{ github.event_name == 'push' && 'development' || inputs.environment }}"
+          SHA="${GITHUB_SHA::8}"
+          ACR="${{ secrets.ACR_LOGIN_SERVER }}"
+          APP="ca-rcp-frontend-$ENV"
+          echo "deploy_env=$FULL_ENV"                     >> "$GITHUB_OUTPUT"
+          echo "app=$APP"                                 >> "$GITHUB_OUTPUT"
+          echo "DEPLOY_ENV=$FULL_ENV"                     >> "$GITHUB_ENV"
+          echo "SHORT_SHA=$SHA"                           >> "$GITHUB_ENV"
+          echo "ACR=$ACR"                                 >> "$GITHUB_ENV"
+          echo "APP=$APP"                                 >> "$GITHUB_ENV"
+          echo "RG=${{ secrets.AZURE_RESOURCE_GROUP }}"   >> "$GITHUB_ENV"
+          echo "IMAGE=$ACR/rc-pricing-frontend:$ENV-$SHA" >> "$GITHUB_ENV"
+          # The moving "-latest" tag uses the same short code as the SHA tag so both
+          # tags share one namespace (dev-/staging-/prod-), not the full env name.
+          echo "IMAGE_LATEST=$ACR/rc-pricing-frontend:$ENV-latest" >> "$GITHUB_ENV"
+
+      - name: Teams — deploy started
+        if: env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"0078D4\",\"summary\":\"Frontend deploy started\",\"text\":\"🚀 **RC Pricing Frontend** deploy to **$DEPLOY_ENV** started by ${{ github.actor }}<br>Commit: $SHORT_SHA<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
 
       - name: Azure login
         uses: azure/login@v2
@@ -50,12 +92,19 @@ jobs:
       - name: ACR login
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Resolve image tag
-        run: echo "TAG=${ENV}-${GITHUB_SHA::8}" >> "$GITHUB_ENV"
+      - name: Capture current image (for rollback)
+        id: prev
+        run: |
+          PREV=$(az containerapp show -n "$APP" -g "$RG" \
+            --query "properties.template.containers[0].image" -o tsv 2>/dev/null || echo "")
+          # Store only the tag portion (strip registry prefix) to avoid secret masking.
+          TAG="${PREV#*/}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Current image: ${PREV:-none (first deploy)}"
 
       - name: Build & push image (per-env NEXT_PUBLIC_* baked in)
         env:
-          DOCKER_BUILDKIT: "1" # enables the Dockerfile cache mounts without needing a buildx builder
+          DOCKER_BUILDKIT: "1" # enables the Dockerfile cache mounts without a buildx builder
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_USE_MOCK="${{ vars.NEXT_PUBLIC_USE_MOCK || 'true' }}" \
@@ -64,29 +113,70 @@ jobs:
             --build-arg NEXT_PUBLIC_AZURE_TENANT_ID="${{ secrets.NEXT_PUBLIC_AZURE_TENANT_ID }}" \
             --build-arg NEXT_PUBLIC_AZURE_REDIRECT_URI="${{ secrets.NEXT_PUBLIC_AZURE_REDIRECT_URI }}" \
             --build-arg NEXT_PUBLIC_AZURE_API_SCOPE="${{ secrets.NEXT_PUBLIC_AZURE_API_SCOPE }}" \
-            -t "$IMAGE:$TAG" -t "$IMAGE:$ENV-latest" .
-          docker push "$IMAGE:$TAG"
-          docker push "$IMAGE:$ENV-latest"
-
-      - name: Capture current image (for rollback)
-        run: |
-          PREV_IMAGE=$(az containerapp show -n "$APP" -g "$RG" \
-            --query "properties.template.containers[0].image" -o tsv 2>/dev/null || true)
-          echo "PREV_IMAGE=$PREV_IMAGE" >> "$GITHUB_ENV"
-          echo "Current image: ${PREV_IMAGE:-none (first deploy)}"
+            -t "$IMAGE" -t "$IMAGE_LATEST" .
+          docker push "$IMAGE"
+          docker push "$IMAGE_LATEST"
 
       - name: Deploy new revision
+        id: deploy
         run: |
-          az containerapp update -n "$APP" -g "$RG" --image "$IMAGE:$TAG"
+          az containerapp update -n "$APP" -g "$RG" \
+            --image "$IMAGE" --revision-suffix "$SHORT_SHA"
+          # Mark that a new revision is live, so auto-rollback can fire even if a
+          # later step (the health wait) fails — not only when external smoke fails.
+          echo "done=true" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test (HTTP)
+      - name: Deactivate old revisions
+        run: |
+          LATEST=$(az containerapp show -n "$APP" -g "$RG" \
+            --query "properties.latestRevisionName" -o tsv)
+          az containerapp revision list -n "$APP" -g "$RG" \
+            --query "[?properties.active && name != '$LATEST'].name" -o tsv | \
+          while read -r rev; do
+            [ -z "$rev" ] && continue
+            echo "Deactivating: $rev"
+            az containerapp revision deactivate -n "$APP" -g "$RG" --revision "$rev" || true
+          done
+
+      - name: Wait for revision to be healthy
+        id: health
         run: |
           FQDN=$(az containerapp show -n "$APP" -g "$RG" \
             --query properties.configuration.ingress.fqdn -o tsv)
+          echo "fqdn=$FQDN" >> "$GITHUB_OUTPUT"
+          REVISION=$(az containerapp revision list -n "$APP" -g "$RG" \
+            --query "sort_by([], &properties.createdTime)[-1].name" -o tsv)
+          echo "Polling revision: $REVISION"
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp revision show -n "$APP" -g "$RG" \
+              --revision "$REVISION" --query "properties.healthState" -o tsv 2>/dev/null || echo "Unknown")
+            echo "[$i/30] Health: $STATE"
+            [ "$STATE" = "Healthy" ] && exit 0
+            sleep 10
+          done
+          echo "Timeout: revision never became healthy"
+          exit 1
+
+  smoke:
+    name: Smoke Test
+    needs: deploy
+    runs-on: [self-hosted, rcp-frontend]
+    environment: ${{ needs.deploy.outputs.deploy_env }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: HTTP smoke check
+        run: |
+          FQDN="${{ needs.deploy.outputs.fqdn }}"
+          if [ -z "$FQDN" ]; then
+            echo "ERROR: no FQDN returned from deploy job"
+            exit 1
+          fi
           echo "Probing https://$FQDN/"
           for i in $(seq 1 12); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$FQDN/" || true)
-            # A 200, or a 3xx redirect to /login (unauthenticated), both mean the app is alive.
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://$FQDN/" || true)
+            # 200, or a 3xx redirect to /login (unauthenticated), both mean the app is alive.
             if echo "$CODE" | grep -qE '^(200|301|302|307|308)$'; then
               echo "Smoke OK (HTTP $CODE)"; exit 0
             fi
@@ -94,15 +184,60 @@ jobs:
           done
           echo "Smoke test failed"; exit 1
 
-      - name: Auto-rollback on failure
-        if: failure() && env.PREV_IMAGE != ''
-        run: |
-          echo "Rolling back $APP to previous image $PREV_IMAGE"
-          az containerapp update -n "$APP" -g "$RG" --image "$PREV_IMAGE"
+  rollback-on-failure:
+    name: Auto-rollback
+    needs: [deploy, smoke]
+    # Roll back whenever a new revision went live but the deploy didn't end fully
+    # green — covers BOTH an unhealthy revision (deploy job failed at health wait)
+    # and a failed external smoke test. Skipped if no revision was ever deployed.
+    if: always() && needs.deploy.outputs.deployed == 'true' && (needs.deploy.result != 'success' || needs.smoke.result != 'success')
+    runs-on: [self-hosted, rcp-frontend]
+    environment: ${{ needs.deploy.outputs.deploy_env }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Notify Teams
+      - name: Roll back frontend
+        run: |
+          PREV_TAG="${{ needs.deploy.outputs.prev_tag }}"
+          [ -z "$PREV_TAG" ] && echo "No previous image tag found — cannot roll back" && exit 1
+          IMAGE="${{ secrets.ACR_LOGIN_SERVER }}/$PREV_TAG"
+          az containerapp update \
+            --name "${{ needs.deploy.outputs.app }}" \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --image "$IMAGE" \
+            --revision-suffix "rollback-$(date +%s)"
+
+      - name: Teams — auto-rolled back
         if: always() && env.TEAMS_WEBHOOK_URL != ''
         run: |
-          curl -s -H 'Content-Type: application/json' \
-            -d "{\"text\":\"Frontend deploy to ${ENV}: ${{ job.status }} (tag ${TAG})\"}" \
-            "$TEAMS_WEBHOOK_URL"
+          curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF8800\",\"summary\":\"Frontend auto-rollback\",\"text\":\"⏪ **RC Pricing Frontend** auto-rollback on **${{ needs.deploy.outputs.deploy_env }}** — smoke failed, reverted to previous image<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+
+  notify:
+    name: Notify result
+    needs: [deploy, smoke]
+    if: always() && needs.deploy.result != 'skipped'
+    runs-on: [self-hosted, rcp-frontend]
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Teams — result
+        if: env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          if [ "${{ needs.smoke.result }}" = "success" ]; then
+            ICON="✅"; MSG="succeeded"; COLOR="00C851"
+          else
+            ICON="❌"; MSG="FAILED"; COLOR="FF4444"
+          fi
+          curl -s -X POST "$TEAMS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"$COLOR\",\"summary\":\"Frontend deploy $MSG\",\"text\":\"$ICON **RC Pricing Frontend** deploy to **${{ needs.deploy.outputs.deploy_env }}** $MSG<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
