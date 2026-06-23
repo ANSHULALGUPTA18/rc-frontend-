@@ -20,11 +20,11 @@
 
 ## 2. Branch → Environment → Azure map
 
-| Branch / action | GitHub Environment | Azure Container App |
-|---|---|---|
-| push `develop` (auto) | `development` | `ca-rcp-frontend-dev` |
-| manual dispatch → `staging` | `staging` | `ca-rcp-frontend-staging` |
-| manual dispatch → `production` | `production` | `ca-rcp-frontend-prod` |
+| Branch / action                | GitHub Environment | Azure Container App       |
+| ------------------------------ | ------------------ | ------------------------- |
+| push `develop` (auto)          | `development`      | `ca-rcp-frontend-dev`     |
+| manual dispatch → `staging`    | `staging`          | `ca-rcp-frontend-staging` |
+| manual dispatch → `production` | `production`       | `ca-rcp-frontend-prod`    |
 
 > The GitHub Environment names (`development`/`staging`/`production`) are mapped inside the workflow to the Azure short codes (`dev`/`staging`/`prod`). **Do not rename** the Azure container apps or the GitHub environments without updating `deploy.yml` + `rollback.yml`.
 
@@ -33,6 +33,7 @@
 ## 3. Developer workflow
 
 ### Day-to-day
+
 1. Branch off `develop`: `git checkout -b feature/my-change`
 2. Push — **`fast-checks`** runs automatically (lint · unit · build, ~4–6 min). Non-blocking, just fast feedback.
 3. Open a **PR into `develop`** — this triggers the blocking gate:
@@ -42,38 +43,46 @@
 5. Merge to `develop` → **auto-deploys to `development`** → smoke test → Teams notification.
 
 ### Rules
+
 - **Always use PRs** for `develop`/`staging`/`main`. A direct push trips **`direct-push-guard`** (red ❌ check + Teams alert) — GitHub Free can't hard-block it, so this is the tripwire.
 - Keep `package-lock.json` committed and in sync — a lockfile change triggers a (slower) cold `npm ci`; code-only changes stay fast.
 - Local commands that mirror CI: `npm run lint` · `npm run format:check` · `npm run typecheck` · `npm run test` · `npm run build`.
 
 ### What runs when (quick reference)
-| You do… | Workflow | Blocks merge? | ~Time (warm) |
-|---|---|---|---|
-| push `feature/*` | fast-checks | no | 4–6 min |
-| open/update PR | ci + security | ci ✅ | 6–10 min |
-| merge to `develop` | deploy → development | — | ~5 min |
-| (nightly 02:00 / 02:30) | security / e2e | no | — |
+
+| You do…                 | Workflow             | Blocks merge? | ~Time (warm) |
+| ----------------------- | -------------------- | ------------- | ------------ |
+| push `feature/*`        | fast-checks          | no            | 4–6 min      |
+| open/update PR          | ci + security        | ci ✅         | 6–10 min     |
+| merge to `develop`      | deploy → development | —             | ~5 min       |
+| (nightly 02:00 / 02:30) | security / e2e       | no            | —            |
 
 ---
 
 ## 4. Promotion & deploys (Team Lead / Release Owner)
 
 ### Auto: development
+
 Merging to `develop` deploys to `development` with no manual step.
 
 ### Manual: staging then production
+
 1. **Actions** tab → **deploy** → **Run workflow**.
 2. Choose environment: **`staging`** (validate), then **`production`**.
 3. If environment protection (required reviewers) is set, the run **pauses for approval** — approve in the run page.
 
 ### What a deploy does (every environment)
+
 `build + push image (NEXT_PUBLIC_* baked in)` → `deploy new revision` → `deactivate old revisions` → `wait healthy` → `HTTP smoke test` → `auto-rollback on failure` → `Teams notify`.
 
 ### Auto-rollback
+
 If a revision goes live but the deploy isn't fully green (unhealthy revision **or** failed smoke test), the pipeline **automatically redeploys the previous image** and posts a Teams alert. No manual action needed.
 
 ### Manual rollback
+
 **Actions** → **rollback** → **Run workflow** → pick environment (`development`/`staging`/`production`).
+
 - Leave **image tag blank** first → it lists recent tags.
 - Re-run with a chosen tag → redeploys it, waits healthy, smoke-checks, notifies.
 
@@ -88,6 +97,7 @@ If a revision goes live but the deploy isn't fully green (unhealthy revision **o
 **Repo variable:** `AZURE_ENABLED` (`true`/`false` master switch)
 
 **Per-environment** (Settings → Environments → development/staging/production):
+
 - Secrets: `NEXT_PUBLIC_API_URL` · `NEXT_PUBLIC_AZURE_CLIENT_ID` · `NEXT_PUBLIC_AZURE_TENANT_ID` · `NEXT_PUBLIC_AZURE_REDIRECT_URI` (optional `NEXT_PUBLIC_AZURE_API_SCOPE`)
 - Variable: `NEXT_PUBLIC_USE_MOCK` (`true` = mock data / no backend; `false` = call real backend)
 
@@ -107,15 +117,15 @@ If a revision goes live but the deploy isn't fully green (unhealthy revision **o
 
 ## 7. Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `deploy` job skipped entirely | `AZURE_ENABLED` is `false` | set repo variable `AZURE_ENABLED=true` |
-| `az acr login` / `docker push` denied | SP missing `AcrPush` on the registry | grant `AcrPush` to the deploy SP |
-| Deploy can't find container app | env→app name mismatch | confirm `ca-rcp-frontend-{dev,staging,prod}` exist & match the mapping in `deploy.yml` |
-| App loads but no data | `NEXT_PUBLIC_USE_MOCK=false` but backend not reachable | set `=true`, or fix `NEXT_PUBLIC_API_URL` / deploy backend |
-| First build very slow | cold cache (new runner or lockfile change) | expected one-time; subsequent builds are warm |
-| Red ❌ from `direct-push-guard` | someone pushed straight to a protected branch | use a PR; the check is a tripwire, not a hard block |
-| Jobs queue / wait | single runner serializes jobs | expected; add a 2nd `rcp-frontend` runner (one-line label change) only if queueing hurts |
+| Symptom                               | Likely cause                                           | Fix                                                                                      |
+| ------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `deploy` job skipped entirely         | `AZURE_ENABLED` is `false`                             | set repo variable `AZURE_ENABLED=true`                                                   |
+| `az acr login` / `docker push` denied | SP missing `AcrPush` on the registry                   | grant `AcrPush` to the deploy SP                                                         |
+| Deploy can't find container app       | env→app name mismatch                                  | confirm `ca-rcp-frontend-{dev,staging,prod}` exist & match the mapping in `deploy.yml`   |
+| App loads but no data                 | `NEXT_PUBLIC_USE_MOCK=false` but backend not reachable | set `=true`, or fix `NEXT_PUBLIC_API_URL` / deploy backend                               |
+| First build very slow                 | cold cache (new runner or lockfile change)             | expected one-time; subsequent builds are warm                                            |
+| Red ❌ from `direct-push-guard`       | someone pushed straight to a protected branch          | use a PR; the check is a tripwire, not a hard block                                      |
+| Jobs queue / wait                     | single runner serializes jobs                          | expected; add a 2nd `rcp-frontend` runner (one-line label change) only if queueing hurts |
 
 **Where to look:** GitHub **Actions** tab → the failing run → expand the failed step. Deploy/rollback also post status to Teams.
 
@@ -126,6 +136,7 @@ If a revision goes live but the deploy isn't fully green (unhealthy revision **o
 **Done:** runner online · repo secrets + `AZURE_ENABLED` · 3 environments with secrets/variables · workflows reviewed & fixed (env-name mapping, image-tag consistency, widened auto-rollback, e2e restored).
 
 **Before going fully live:**
+
 - [ ] Commit the workflow changes and get them onto `develop` (workflows only run from the committed branch).
 - [ ] Confirm deploy SP has `AcrPush` on the ACR.
 - [ ] Confirm backend reachability before setting any env's `NEXT_PUBLIC_USE_MOCK=false`.

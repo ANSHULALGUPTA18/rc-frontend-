@@ -40,17 +40,17 @@ DEVELOPER                 GITHUB ACTIONS (self-hosted runner @ 192.168.0.160)   
 
 ## 2. Trigger & timing matrix
 
-| Workflow | Trigger | Jobs | Blocks? | Warm | Cold |
-|---|---|---|---|---|---|
-| **fast-checks** | push to `feature/*` (not develop/staging/main) | lint · unit · build | no | **4–6 min** | 8–12 |
-| **ci** | PR → develop/staging/main | lint · format · typecheck · coverage · build | ✅ merge | **6–10 min** | 10–15 |
-| **security** | PR + nightly **02:00 UTC** | secret-scan · audit · trivy · notify | no | **4–6 min** | 6–10 |
-| **deploy** | push `develop` (auto) / manual dispatch (staging,production) | deploy · smoke · rollback · notify | — | **~5 min** | 10–15 |
-| **e2e** | nightly **02:30 UTC** + on-demand | Playwright | no | **5–10 min** | 10–15 |
-| **rollback** | manual dispatch | rollback (image redeploy) | — | ~3–5 min | — |
-| **direct-push-guard** | push develop/staging/main | tripwire (PR check) | ✅ red X | <30 s | <30 s |
-| **hotfix-backport** | push `main` | open backport PR | — | <1 min | — |
-| **acr-cleanup** | scheduled | prune ACR (`--ago 30d --keep 10`) | — | ~1 min | — |
+| Workflow              | Trigger                                                      | Jobs                                         | Blocks?  | Warm         | Cold  |
+| --------------------- | ------------------------------------------------------------ | -------------------------------------------- | -------- | ------------ | ----- |
+| **fast-checks**       | push to `feature/*` (not develop/staging/main)               | lint · unit · build                          | no       | **4–6 min**  | 8–12  |
+| **ci**                | PR → develop/staging/main                                    | lint · format · typecheck · coverage · build | ✅ merge | **6–10 min** | 10–15 |
+| **security**          | PR + nightly **02:00 UTC**                                   | secret-scan · audit · trivy · notify         | no       | **4–6 min**  | 6–10  |
+| **deploy**            | push `develop` (auto) / manual dispatch (staging,production) | deploy · smoke · rollback · notify           | —        | **~5 min**   | 10–15 |
+| **e2e**               | nightly **02:30 UTC** + on-demand                            | Playwright                                   | no       | **5–10 min** | 10–15 |
+| **rollback**          | manual dispatch                                              | rollback (image redeploy)                    | —        | ~3–5 min     | —     |
+| **direct-push-guard** | push develop/staging/main                                    | tripwire (PR check)                          | ✅ red X | <30 s        | <30 s |
+| **hotfix-backport**   | push `main`                                                  | open backport PR                             | —        | <1 min       | —     |
+| **acr-cleanup**       | scheduled                                                    | prune ACR (`--ago 30d --keep 10`)            | —        | ~1 min       | —     |
 
 ---
 
@@ -137,8 +137,8 @@ DEVELOPER                 GITHUB ACTIONS (self-hosted runner @ 192.168.0.160)   
  nightly  02:00 security scan      02:30 Playwright e2e
 ```
 
-| Branch / action | GitHub env | Azure Container App |
-|---|---|---|
-| push `develop` | `development` | `ca-rcp-frontend-dev` |
-| dispatch `staging` | `staging` | `ca-rcp-frontend-staging` |
-| dispatch `production` | `production` | `ca-rcp-frontend-prod` |
+| Branch / action       | GitHub env    | Azure Container App       |
+| --------------------- | ------------- | ------------------------- |
+| push `develop`        | `development` | `ca-rcp-frontend-dev`     |
+| dispatch `staging`    | `staging`     | `ca-rcp-frontend-staging` |
+| dispatch `production` | `production`  | `ca-rcp-frontend-prod`    |
