@@ -82,7 +82,7 @@ jobs:
         run: |
           curl -s -X POST "$TEAMS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"0078D4\",\"summary\":\"Frontend deploy started\",\"text\":\"🚀 **RC Pricing Frontend** deploy to **$DEPLOY_ENV** started by ${{ github.actor }}<br>Commit: $SHORT_SHA<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+            -d "{\"text\":\"🚀 RC Pricing Frontend deploy to $DEPLOY_ENV started by ${{ github.actor }}\nCommit: $SHORT_SHA\nView run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
 
       - name: Azure login
         uses: azure/login@v2
@@ -220,7 +220,7 @@ jobs:
         run: |
           curl -s -X POST "$TEAMS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF8800\",\"summary\":\"Frontend auto-rollback\",\"text\":\"⏪ **RC Pricing Frontend** auto-rollback on **${{ needs.deploy.outputs.deploy_env }}** — smoke failed, reverted to previous image<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+            -d "{\"text\":\"⏪ RC Pricing Frontend auto-rollback on ${{ needs.deploy.outputs.deploy_env }} — deploy did not go green, reverted to previous image\nView run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
 
   notify:
     name: Notify result
@@ -234,10 +234,10 @@ jobs:
         if: env.TEAMS_WEBHOOK_URL != ''
         run: |
           if [ "${{ needs.smoke.result }}" = "success" ]; then
-            ICON="✅"; MSG="succeeded"; COLOR="00C851"
+            ICON="✅"; MSG="succeeded"
           else
-            ICON="❌"; MSG="FAILED"; COLOR="FF4444"
+            ICON="❌"; MSG="FAILED"
           fi
           curl -s -X POST "$TEAMS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"$COLOR\",\"summary\":\"Frontend deploy $MSG\",\"text\":\"$ICON **RC Pricing Frontend** deploy to **${{ needs.deploy.outputs.deploy_env }}** $MSG<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+            -d "{\"text\":\"$ICON RC Pricing Frontend deploy to ${{ needs.deploy.outputs.deploy_env }} $MSG\nView run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

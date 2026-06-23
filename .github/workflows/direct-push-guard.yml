@@ -64,7 +64,7 @@ jobs:
           if [ -n "${TEAMS_WEBHOOK_URL:-}" ]; then
             curl -s -X POST "$TEAMS_WEBHOOK_URL" \
               -H "Content-Type: application/json" \
-              -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF4444\",\"summary\":\"Direct push detected\",\"text\":\"🚫 **Direct push to \`${{ github.ref_name }}\`** by **${{ github.actor }}** — no Pull Request. Please use a PR.<br>Commit: ${{ github.sha }}<br>[View](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})\"}" || true
+              -d "{\"text\":\"🚫 Direct push to ${{ github.ref_name }} by ${{ github.actor }} — no Pull Request. Please use a PR.\nCommit: ${{ github.sha }}\nView: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}\"}" || true
           fi
 
           # Fail so it shows as a red check on the branch (the tripwire).

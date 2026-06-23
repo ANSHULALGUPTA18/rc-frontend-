@@ -59,7 +59,7 @@ jobs:
         run: |
           curl -s -X POST "$TEAMS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"FF8800\",\"summary\":\"Frontend rollback started\",\"text\":\"⏪ **RC Pricing Frontend** rollback to \`${{ inputs.image_tag }}\` on **${{ inputs.environment }}** triggered by ${{ github.actor }}\"}"
+            -d "{\"text\":\"⏪ RC Pricing Frontend rollback to ${{ inputs.image_tag }} on ${{ inputs.environment }} triggered by ${{ github.actor }}\"}"
 
       - name: Redeploy chosen image
         if: inputs.image_tag != ''
@@ -104,7 +104,7 @@ jobs:
       - name: Teams — rollback result
         if: always() && inputs.image_tag != '' && env.TEAMS_WEBHOOK_URL != ''
         run: |
-          if [ "${{ job.status }}" = "success" ]; then ICON="✅"; COLOR="00C851"; else ICON="❌"; COLOR="FF4444"; fi
+          if [ "${{ job.status }}" = "success" ]; then ICON="✅"; else ICON="❌"; fi
           curl -s -X POST "$TEAMS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d "{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"themeColor\":\"$COLOR\",\"summary\":\"Frontend rollback ${{ job.status }}\",\"text\":\"$ICON **RC Pricing Frontend** rollback on **${{ inputs.environment }}** to \`${{ inputs.image_tag }}\` — ${{ job.status }}<br>[View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+            -d "{\"text\":\"$ICON RC Pricing Frontend rollback on ${{ inputs.environment }} to ${{ inputs.image_tag }} — ${{ job.status }}\nView run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
