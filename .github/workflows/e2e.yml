@@ -76,7 +76,9 @@ jobs:
           cp -al "$NODE_CACHE/next-cache" .next/cache 2>/dev/null || true
 
       - name: Ensure Playwright browsers (pre-installed on runner; no-op safety net)
-        run: npx playwright install --with-deps
+        # No --with-deps: it always shells out to `sudo apt-get install`, even
+        # with browsers cached, and this runner has no non-interactive sudo.
+        run: npx playwright install
 
       - name: Run Playwright tests
         run: npm run test:e2e -- --workers=4
