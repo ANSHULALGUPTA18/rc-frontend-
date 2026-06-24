@@ -22,8 +22,16 @@ function getInitials(name: string): string {
 
 function UserIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
@@ -32,8 +40,16 @@ function UserIcon(): React.ReactElement {
 
 function SettingsIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
@@ -42,8 +58,16 @@ function SettingsIcon(): React.ReactElement {
 
 function LogoutIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
@@ -53,8 +77,16 @@ function LogoutIcon(): React.ReactElement {
 
 function BellIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-5 w-5">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-5 w-5"
+    >
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
@@ -76,9 +108,16 @@ interface NotificationsResponse {
 
 function ChevronIcon({ open }: { open: boolean }): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-      className={`h-3.5 w-3.5 transition-transform text-ink-subtle ${open ? "rotate-180" : ""}`}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={`h-3.5 w-3.5 transition-transform text-ink-subtle ${open ? "rotate-180" : ""}`}
+    >
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -136,7 +175,10 @@ export function TopBar(): React.ReactElement {
   useEffect(() => {
     if (!open && !bellOpen) return;
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") { setOpen(false); setBellOpen(false); }
+      if (e.key === "Escape") {
+        setOpen(false);
+        setBellOpen(false);
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -170,7 +212,7 @@ export function TopBar(): React.ReactElement {
               <h3 className="text-sm font-bold text-ink">Notifications</h3>
             </div>
             <div className="max-h-72 overflow-y-auto">
-              {(!notifications?.items || notifications.items.length === 0) ? (
+              {!notifications?.items || notifications.items.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-ink-muted">
                   No notifications yet
                 </div>
@@ -219,9 +261,7 @@ export function TopBar(): React.ReactElement {
           className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
         >
           {/* Name */}
-          <span className="hidden text-sm font-medium text-ink sm:block">
-            {displayName}
-          </span>
+          <span className="hidden text-sm font-medium text-ink sm:block">{displayName}</span>
           {/* Avatar */}
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar text-xs font-bold text-white">
             {initials}
@@ -239,9 +279,7 @@ export function TopBar(): React.ReactElement {
             <div className="px-4 py-3">
               <p className="text-sm font-semibold text-ink">{displayName}</p>
               {displayEmail && (
-                <p className="mt-0.5 truncate text-xs text-ink-muted">
-                  {displayEmail}
-                </p>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">{displayEmail}</p>
               )}
               {user?.role && (
                 <span className="mt-1.5 inline-flex rounded-full bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted">

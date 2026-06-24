@@ -80,7 +80,7 @@ describe("getAccessToken — Azure mode (NEXT_PUBLIC_USE_MOCK=false)", () => {
       expect.objectContaining({
         scopes: ["api://rc-pricing-backend/access_as_user"],
         account: { homeAccountId: "abc" },
-      })
+      }),
     );
   });
 
@@ -101,7 +101,7 @@ describe("getAccessToken — Azure mode (NEXT_PUBLIC_USE_MOCK=false)", () => {
       getAccessTokenAzure({
         instance: { acquireTokenSilent, acquireTokenRedirect } as never,
         account: { homeAccountId: "abc" } as never,
-      })
+      }),
     ).rejects.toThrow(/permission/i);
 
     expect(acquireTokenRedirect).not.toHaveBeenCalled();

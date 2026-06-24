@@ -23,7 +23,7 @@ describe("apiFetch — mock mode (NEXT_PUBLIC_USE_MOCK=true)", () => {
       http.get(`${API_BASE_URL}/v1/ping`, ({ request }) => {
         authHeader = request.headers.get("authorization");
         return HttpResponse.json({ ok: true });
-      })
+      }),
     );
 
     const { apiFetch } = await import("@/lib/api/client");
@@ -41,7 +41,7 @@ describe("apiFetch — mock mode (NEXT_PUBLIC_USE_MOCK=true)", () => {
       http.post(`${API_BASE_URL}/v1/echo`, ({ request }) => {
         contentType = request.headers.get("content-type");
         return HttpResponse.json({ ok: true });
-      })
+      }),
     );
 
     const { apiFetch } = await import("@/lib/api/client");
@@ -55,8 +55,8 @@ describe("apiFetch — mock mode (NEXT_PUBLIC_USE_MOCK=true)", () => {
 
     server.use(
       http.get(`${API_BASE_URL}/v1/missing`, () =>
-        HttpResponse.json({ detail: "JD not found" }, { status: 404 })
-      )
+        HttpResponse.json({ detail: "JD not found" }, { status: 404 }),
+      ),
     );
 
     const { apiFetch } = await import("@/lib/api/client");
@@ -72,7 +72,7 @@ describe("apiFetch — mock mode (NEXT_PUBLIC_USE_MOCK=true)", () => {
     vi.stubEnv("NEXT_PUBLIC_USE_MOCK", "true");
 
     server.use(
-      http.delete(`${API_BASE_URL}/v1/items/1`, () => new HttpResponse(null, { status: 204 }))
+      http.delete(`${API_BASE_URL}/v1/items/1`, () => new HttpResponse(null, { status: 204 })),
     );
 
     const { apiFetch } = await import("@/lib/api/client");
@@ -94,7 +94,7 @@ describe("apiFetch — Azure mode (NEXT_PUBLIC_USE_MOCK=false)", () => {
       http.get(`${API_BASE_URL}/v1/secure`, ({ request }) => {
         authHeader = request.headers.get("authorization");
         return HttpResponse.json({ ok: true });
-      })
+      }),
     );
 
     const { apiFetch } = await import("@/lib/api/client");
@@ -114,7 +114,7 @@ describe("apiFetch — Azure mode (NEXT_PUBLIC_USE_MOCK=false)", () => {
       http.get(`${API_BASE_URL}/v1/secure`, ({ request }) => {
         authHeader = request.headers.get("authorization");
         return HttpResponse.json({ ok: true });
-      })
+      }),
     );
 
     const { apiFetch } = await import("@/lib/api/client");

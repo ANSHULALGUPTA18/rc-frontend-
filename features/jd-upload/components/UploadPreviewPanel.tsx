@@ -11,7 +11,16 @@ const stripExtension = (name: string): string => name.replace(/\.[^.]+$/, "");
 
 function SearchIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-7 w-7 text-sidebar-active">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-7 w-7 text-sidebar-active"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m21 21-4.3-4.3" />
     </svg>
@@ -20,7 +29,16 @@ function SearchIcon(): React.ReactElement {
 
 function TrashIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M3 6h18" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
       <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -36,8 +54,8 @@ function EmptyState(): React.ReactElement {
       </span>
       <h3 className="text-lg font-bold text-ink">Upload Preview</h3>
       <p className="max-w-xs text-sm text-ink-muted">
-        Upload multiple Documents to compare market rates, skill demands, and
-        agency recommendations side by side.
+        Upload multiple Documents to compare market rates, skill demands, and agency recommendations
+        side by side.
       </p>
     </div>
   );
@@ -61,9 +79,7 @@ export function UploadPreviewPanel({
       ) : (
         <div className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-bold text-ink">
-              Uploaded Document Preview
-            </h3>
+            <h3 className="text-base font-bold text-ink">Uploaded Document Preview</h3>
             <button
               type="button"
               onClick={onClear}

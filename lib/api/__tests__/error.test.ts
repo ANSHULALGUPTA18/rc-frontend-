@@ -64,7 +64,7 @@ describe("parseApiErrorResponse", () => {
         detail: "Validation failed",
         errors: [{ field: "rate", msg: "must be positive" }],
       }),
-      { status: 422, statusText: "Unprocessable Entity" }
+      { status: 422, statusText: "Unprocessable Entity" },
     );
 
     const err = await parseApiErrorResponse(response);
@@ -80,7 +80,7 @@ describe("parseApiErrorResponse", () => {
         detail: "Validation failed",
         errors: [{ field: "rate" }, { field: "x", msg: "bad" }, "not-an-object"],
       }),
-      { status: 422 }
+      { status: 422 },
     );
 
     const err = await parseApiErrorResponse(response);

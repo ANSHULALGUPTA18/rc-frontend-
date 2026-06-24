@@ -2,9 +2,7 @@ interface AddPromptCardProps {
   onClick?: () => void;
 }
 
-export function AddPromptCard({
-  onClick,
-}: AddPromptCardProps): React.ReactElement {
+export function AddPromptCard({ onClick }: AddPromptCardProps): React.ReactElement {
   return (
     <button
       type="button"

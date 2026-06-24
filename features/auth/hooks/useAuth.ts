@@ -42,8 +42,7 @@ export function useLogin() {
   const router = useRouter();
 
   const mutation = useMutation({
-    mutationFn: ({ email, password }: LoginVariables) =>
-      apiLogin(email, password),
+    mutationFn: ({ email, password }: LoginVariables) => apiLogin(email, password),
     onSuccess: (data, variables) => {
       setToken(data.token, variables.rememberMe);
       setUser({ name: data.user.name, email: data.user.email }, variables.rememberMe);
@@ -122,7 +121,7 @@ export function useAzureUser() {
 
   return {
     name: account.name ?? "",
-    email: account.username,      // username is the UPN / email in Azure AD
+    email: account.username, // username is the UPN / email in Azure AD
     tenantId: account.tenantId,
   };
 }

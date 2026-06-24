@@ -27,9 +27,7 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
 
-        <main className="flex-1 overflow-auto px-6 py-8 lg:px-10">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto px-6 py-8 lg:px-10">{children}</main>
       </div>
     </div>
   );

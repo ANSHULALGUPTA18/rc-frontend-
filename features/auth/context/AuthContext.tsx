@@ -16,12 +16,7 @@
  *            useIsAuthenticated() returns true as long as the token is valid.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-} from "react";
+import { createContext, useCallback, useContext, useMemo } from "react";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 import { useRouter } from "next/navigation";
 import { AUTH_DISABLED, IS_MOCK } from "@/lib/api/config";
@@ -54,11 +49,7 @@ const AuthContext = createContext<AuthContextValue>({
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
+export function AuthProvider({ children }: { children: React.ReactNode }): React.ReactElement {
   const router = useRouter();
   const { instance, accounts } = useMsal();
   const isAzureAuthenticated = useIsAuthenticated();

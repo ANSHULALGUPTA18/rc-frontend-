@@ -84,7 +84,8 @@ export function FileUpload({
         "hover:border-brand hover:bg-brand-soft",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2",
         isDragging && "border-brand bg-brand-soft",
-        disabled && "cursor-not-allowed opacity-60 hover:border-line-strong hover:bg-surface-subtle",
+        disabled &&
+          "cursor-not-allowed opacity-60 hover:border-line-strong hover:bg-surface-subtle",
         className,
       )}
     >

@@ -23,9 +23,7 @@ function RoleBadge({ role }: { role: string }): React.ReactElement {
     <span
       className={cn(
         "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
-        isAdmin
-          ? "bg-purple-100 text-purple-700"
-          : "bg-blue-100 text-blue-700",
+        isAdmin ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700",
       )}
     >
       {role}
@@ -35,7 +33,15 @@ function RoleBadge({ role }: { role: string }): React.ReactElement {
 
 function PlusIcon(): React.ReactElement {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true" className="h-4 w-4">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="h-4 w-4"
+    >
       <path d="M12 5v14M5 12h14" />
     </svg>
   );
@@ -166,22 +172,19 @@ export function UserManagementView(): React.ReactElement {
               </select>
             </div>
           </div>
-          {addError && (
-            <p className="mt-3 text-xs text-red-600">{addError}</p>
-          )}
+          {addError && <p className="mt-3 text-xs text-red-600">{addError}</p>}
           <div className="mt-4 flex justify-end gap-2">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => { setShowAddForm(false); setAddError(null); }}
+              onClick={() => {
+                setShowAddForm(false);
+                setAddError(null);
+              }}
             >
               Cancel
             </Button>
-            <Button
-              size="sm"
-              disabled={adding}
-              onClick={() => void handleAddUser()}
-            >
+            <Button size="sm" disabled={adding} onClick={() => void handleAddUser()}>
               {adding ? "Adding..." : "Add User"}
             </Button>
           </div>
@@ -191,23 +194,37 @@ export function UserManagementView(): React.ReactElement {
       {/* User Table */}
       <div className="mt-6 rounded-card border border-line bg-surface shadow-card">
         <div className="border-b border-line px-6 py-4">
-          <h2 className="text-base font-bold text-ink">
-            Users ({users.length})
-          </h2>
+          <h2 className="text-base font-bold text-ink">Users ({users.length})</h2>
         </div>
 
-        {isLoading && <div className="p-6"><LoadingSpinner /></div>}
-        {error && <div className="p-6"><ErrorState message="Failed to load users." onRetry={() => void refetch()} /></div>}
+        {isLoading && (
+          <div className="p-6">
+            <LoadingSpinner />
+          </div>
+        )}
+        {error && (
+          <div className="p-6">
+            <ErrorState message="Failed to load users." onRetry={() => void refetch()} />
+          </div>
+        )}
 
         {!isLoading && !error && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line">
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -218,7 +235,9 @@ export function UserManagementView(): React.ReactElement {
                     <tr key={user.id} className="border-b border-line last:border-0">
                       <td className="px-6 py-4 font-medium text-ink">{user.name}</td>
                       <td className="px-6 py-4 text-ink-muted">{user.email}</td>
-                      <td className="px-6 py-4"><RoleBadge role={user.role} /></td>
+                      <td className="px-6 py-4">
+                        <RoleBadge role={user.role} />
+                      </td>
                       <td className="px-6 py-4">
                         {isSelf ? (
                           <span className="text-xs text-ink-subtle">Current user</span>
@@ -231,7 +250,11 @@ export function UserManagementView(): React.ReactElement {
                               void handleRoleChange(user.id, isUserAdmin ? "RECRUITER" : "ADMIN")
                             }
                           >
-                            {updatingId === user.id ? "..." : isUserAdmin ? "Revoke Admin" : "Make Admin"}
+                            {updatingId === user.id
+                              ? "..."
+                              : isUserAdmin
+                                ? "Revoke Admin"
+                                : "Make Admin"}
                           </Button>
                         )}
                       </td>

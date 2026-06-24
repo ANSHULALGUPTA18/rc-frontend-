@@ -1,0 +1,291 @@
+name: ci
+
+# Full quality gate on every PR. BLOCKS MERGE.
+# Runs in mock mode, so no backend or Azure is required.
+#
+# Mirrors the multi-job house style used by lead-generator / bench-sales:
+# each gate is its own parallel job, sharing a node_modules cache on the
+# self-hosted runner so only a changed package-lock.json triggers `npm ci`.
+# e2e is intentionally kept off the PR gate (see e2e.yml — nightly + on-demand).
+on:
+  pull_request:
+    branches: [develop, staging, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_PUBLIC_USE_MOCK: "true" # mock mode: no backend needed in CI
+  NODE_CACHE: /opt/ci-cache/rc-pricing-frontend
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: ESLint
+        run: npm run lint
+
+  format:
+    name: Format
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: Prettier check
+        run: npm run format:check
+
+  typecheck:
+    name: Typecheck
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+  test:
+    name: Unit Tests
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      # Plain `npm run test` keeps the gate on pass/fail. Coverage is collected
+      # but non-blocking until feature coverage is restored (see vitest.config.ts).
+      - name: Unit tests
+        run: npm run test
+        env:
+          CI: "true"
+          NODE_OPTIONS: "--max-old-space-size=4096"
+          NEXT_TELEMETRY_DISABLED: "1"
+          NO_COLOR: "1"
+
+      - name: Coverage report (non-blocking)
+        run: npm run test:coverage || true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.sha }}
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Build
+    runs-on: [self-hosted, rcp-frontend]
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Restore node_modules (skip npm ci if lock unchanged)
+        run: |
+          mkdir -p "$NODE_CACHE"
+          HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+          if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+            (flock -x 9
+              if [ "$(cat "$NODE_CACHE/.lock_hash" 2>/dev/null)" != "$HASH" ]; then
+                echo "package-lock.json changed — running npm ci..."
+                npm ci
+                rm -rf "$NODE_CACHE/node_modules.new"
+                cp -r node_modules "$NODE_CACHE/node_modules.new"
+                rm -rf "$NODE_CACHE/node_modules"
+                mv "$NODE_CACHE/node_modules.new" "$NODE_CACHE/node_modules"
+                echo "$HASH" > "$NODE_CACHE/.lock_hash"
+              fi
+            ) 9>"$NODE_CACHE/install.lock"
+          else
+            echo "Lock unchanged — using cached node_modules."
+          fi
+          rm -rf node_modules
+          cp -al "$NODE_CACHE/node_modules" ./node_modules 2>/dev/null \
+            || ln -sfn "$NODE_CACHE/node_modules" ./node_modules
+
+      - name: Restore Next.js build cache
+        run: |
+          mkdir -p .next
+          cp -al "$NODE_CACHE/next-cache" .next/cache 2>/dev/null || true
+
+      - name: Next.js build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NO_COLOR: "1"
+
+      - name: Validate standalone output
+        run: |
+          if [ ! -f ".next/standalone/server.js" ]; then
+            echo "ERROR: .next/standalone/server.js not found."
+            echo "Ensure next.config.mjs has: output: 'standalone'"
+            exit 1
+          fi
+          echo "Standalone output OK."
+
+      - name: Save Next.js build cache
+        if: success()
+        run: |
+          rm -rf "$NODE_CACHE/next-cache"
+          cp -r .next/cache "$NODE_CACHE/next-cache" 2>/dev/null || true
+
+  notify:
+    name: Notify on failure
+    needs: [lint, format, typecheck, test, build]
+    if: failure()
+    runs-on: [self-hosted, rcp-frontend]
+    env:
+      TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+    steps:
+      - name: Notify Teams
+        if: env.TEAMS_WEBHOOK_URL != ''
+        run: |
+          curl -s -H 'Content-Type: application/json' \
+            -d "{\"text\":\"❌ Frontend CI failed on PR #${{ github.event.pull_request.number }} (${{ github.head_ref }})\"}" \
+            "$TEAMS_WEBHOOK_URL"

@@ -103,12 +103,8 @@ describe("LoginView", () => {
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/remember me/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /sign in/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /forgot password/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /forgot password/i })).toBeInTheDocument();
   });
 
   // ── 2. Validation — empty email ──────────────────────────────────────────────
@@ -130,9 +126,7 @@ describe("LoginView", () => {
     await user.type(screen.getByLabelText(/email address/i), VALID_EMAIL);
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(
-      await screen.findByText(/password is required/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/password is required/i)).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
@@ -144,9 +138,7 @@ describe("LoginView", () => {
     await user.type(screen.getByLabelText(/email address/i), "not-an-email");
     await user.click(screen.getByRole("button", { name: /sign in/i }));
 
-    expect(
-      await screen.findByText(/invalid email format/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/invalid email format/i)).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
@@ -187,9 +179,7 @@ describe("LoginView", () => {
   // ── 7. Invalid credentials error ─────────────────────────────────────────────
 
   it("displays error alert on invalid credentials", async () => {
-    vi.mocked(mockLogin).mockRejectedValueOnce(
-      new Error("Invalid email or password."),
-    );
+    vi.mocked(mockLogin).mockRejectedValueOnce(new Error("Invalid email or password."));
     const { user } = renderLogin();
 
     await user.type(screen.getByLabelText(/email address/i), "wrong@test.com");
@@ -204,9 +194,7 @@ describe("LoginView", () => {
   // ── 8. API failure (server error) ────────────────────────────────────────────
 
   it("displays error alert on unexpected API failure", async () => {
-    vi.mocked(mockLogin).mockRejectedValueOnce(
-      new Error("Internal server error."),
-    );
+    vi.mocked(mockLogin).mockRejectedValueOnce(new Error("Internal server error."));
     const { user } = renderLogin();
 
     await user.type(screen.getByLabelText(/email address/i), VALID_EMAIL);
@@ -220,9 +208,7 @@ describe("LoginView", () => {
   // ── 9. Network timeout / offline ─────────────────────────────────────────────
 
   it("displays error alert on network failure (TypeError: Failed to fetch)", async () => {
-    vi.mocked(mockLogin).mockRejectedValueOnce(
-      new TypeError("Failed to fetch"),
-    );
+    vi.mocked(mockLogin).mockRejectedValueOnce(new TypeError("Failed to fetch"));
     const { user } = renderLogin();
 
     await user.type(screen.getByLabelText(/email address/i), VALID_EMAIL);

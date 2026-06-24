@@ -12,10 +12,7 @@
  */
 
 import { useCallback, useState } from "react";
-import {
-  MAX_JD_FILE_BYTES,
-  type SelectedJdFile,
-} from "@/features/jd-upload/types";
+import { MAX_JD_FILE_BYTES, type SelectedJdFile } from "@/features/jd-upload/types";
 
 const MAX_JD_FILES = 5;
 
@@ -34,9 +31,7 @@ const createId = (): string =>
     : `jd-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const isDuplicate = (existing: SelectedJdFile[], file: File): boolean =>
-  existing.some(
-    (entry) => entry.file.name === file.name && entry.file.size === file.size,
-  );
+  existing.some((entry) => entry.file.name === file.name && entry.file.size === file.size);
 
 export function useJdUpload(): UseJdUploadResult {
   const [files, setFiles] = useState<SelectedJdFile[]>([]);

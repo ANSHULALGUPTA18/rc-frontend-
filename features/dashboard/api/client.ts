@@ -96,15 +96,45 @@ const MOCK_KPI: KpiStats = {
 };
 
 const MOCK_APPROVALS: ApprovalRow[] = [
-  { id: "1", jdId: "jd-8821", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "approved", submittedByName: "Anshu G", submittedByEmail: "anshu.g@techgene.com" },
-  { id: "2", jdId: "jd-8822", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending", submittedByName: "Anshu G", submittedByEmail: "anshu.g@techgene.com" },
-  { id: "3", jdId: "jd-8823", payRateRange: "$60.00 - $70.00/hr", billRateRange: "$145.00 - $155.00/hr", markupPct: "32.5", aiConfidence: 94, status: "pending", submittedByName: null, submittedByEmail: null },
+  {
+    id: "1",
+    jdId: "jd-8821",
+    payRateRange: "$60.00 - $70.00/hr",
+    billRateRange: "$145.00 - $155.00/hr",
+    markupPct: "32.5",
+    aiConfidence: 94,
+    status: "approved",
+    submittedByName: "Anshu G",
+    submittedByEmail: "anshu.g@techgene.com",
+  },
+  {
+    id: "2",
+    jdId: "jd-8822",
+    payRateRange: "$60.00 - $70.00/hr",
+    billRateRange: "$145.00 - $155.00/hr",
+    markupPct: "32.5",
+    aiConfidence: 94,
+    status: "pending",
+    submittedByName: "Anshu G",
+    submittedByEmail: "anshu.g@techgene.com",
+  },
+  {
+    id: "3",
+    jdId: "jd-8823",
+    payRateRange: "$60.00 - $70.00/hr",
+    billRateRange: "$145.00 - $155.00/hr",
+    markupPct: "32.5",
+    aiConfidence: 94,
+    status: "pending",
+    submittedByName: null,
+    submittedByEmail: null,
+  },
 ];
 
 const MOCK_REPORTS: ReportItem[] = [
-  { id: "1", title: "Q1 Pricing Outlook",  fileType: "PDF",  fileSize: "4.2 MB"  },
+  { id: "1", title: "Q1 Pricing Outlook", fileType: "PDF", fileSize: "4.2 MB" },
   { id: "2", title: "Regional Benchmarks", fileType: "XLSX", fileSize: "12.8 MB" },
-  { id: "3", title: "AI Talent Scarcity",  fileType: "PDF",  fileSize: "2.1 MB"  },
+  { id: "3", title: "AI Talent Scarcity", fileType: "PDF", fileSize: "2.1 MB" },
 ];
 
 // ─── API functions ────────────────────────────────────────────────────────────
@@ -128,7 +158,8 @@ export async function getKpiStats(msal?: MsalTokenContext): Promise<KpiStats> {
     activeRequests: res.total,
     activeRequestsTrend: res.total === 1 ? "1 recommendation" : `${res.total} recommendations`,
     pendingApprovals,
-    pendingApprovalsTrend: pendingApprovals === 1 ? "1 awaiting review" : `${pendingApprovals} awaiting review`,
+    pendingApprovalsTrend:
+      pendingApprovals === 1 ? "1 awaiting review" : `${pendingApprovals} awaiting review`,
     recentPricingReports: completed,
     accuracyRate: `${avgConfidence}% avg confidence`,
     avgMargin: `${avgMargin.toFixed(1)}%`,
@@ -147,10 +178,7 @@ export async function getReports(): Promise<ReportItem[]> {
   return [];
 }
 
-export async function approveRecommendation(
-  recId: string,
-  msal?: MsalTokenContext,
-): Promise<void> {
+export async function approveRecommendation(recId: string, msal?: MsalTokenContext): Promise<void> {
   await apiFetch(`/v1/recommendations/${recId}/approve`, {
     method: "POST",
     body: JSON.stringify({ action: "approved" }),
