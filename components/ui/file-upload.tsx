@@ -16,8 +16,8 @@ export interface FileUploadProps {
 function CloudUploadIcon(): React.ReactElement {
   return (
     <svg
-      width="48"
-      height="48"
+      width="36"
+      height="36"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -80,7 +80,7 @@ export function FileUpload({
         if (!disabled) emit(event.dataTransfer.files);
       }}
       className={cn(
-        "flex min-h-[16rem] cursor-pointer flex-col items-center justify-center gap-4 rounded-card border-2 border-dashed border-line-strong bg-surface-subtle px-6 py-10 text-center transition-colors",
+        "flex min-h-[10rem] cursor-pointer flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed border-line-strong bg-surface-subtle px-6 py-6 text-center transition-colors",
         "hover:border-brand hover:bg-brand-soft",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2",
         isDragging && "border-brand bg-brand-soft",

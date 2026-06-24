@@ -4,7 +4,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
-import { AppShell } from "@/components/layout/AppShell";
+import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import type { SubmittedJd } from "@/features/jd-upload/types";
 
 function DocumentIcon(): React.ReactElement {
@@ -25,13 +26,7 @@ function DocumentIcon(): React.ReactElement {
   );
 }
 
-function SkillPill({
-  label,
-  variant = "default",
-}: {
-  label: string;
-  variant?: "default" | "mandatory";
-}): React.ReactElement {
+function SkillPill({ label, variant = "default" }: { label: string; variant?: "default" | "mandatory" }): React.ReactElement {
   return (
     <span
       className={cn(
@@ -46,13 +41,7 @@ function SkillPill({
   );
 }
 
-function FieldRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}): React.ReactElement | null {
+function FieldRow({ label, value }: { label: string; value: string | null | undefined }): React.ReactElement | null {
   if (!value) return null;
   return (
     <div className="flex items-start gap-4 py-3 border-b border-line last:border-0">
@@ -65,18 +54,11 @@ function FieldRow({
 function ConfidenceBadge({ confidence }: { confidence: number }): React.ReactElement {
   const pct = Math.round(confidence * 100);
   const color =
-    pct >= 70
-      ? "text-green-700 bg-green-50 ring-green-200"
-      : pct >= 40
-        ? "text-amber-700 bg-amber-50 ring-amber-200"
-        : "text-red-700 bg-red-50 ring-red-200";
+    pct >= 70 ? "text-green-700 bg-green-50 ring-green-200" :
+    pct >= 40 ? "text-amber-700 bg-amber-50 ring-amber-200" :
+    "text-red-700 bg-red-50 ring-red-200";
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1",
-        color,
-      )}
-    >
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1", color)}>
       {pct}% confidence
     </span>
   );
@@ -133,19 +115,24 @@ export function ExtractionView({
   const fields = selected?.extractedFields;
 
   return (
-    <AppShell>
-      <div className="flex flex-1 flex-col">
-        <header className="space-y-6">
+    <div className="flex h-screen overflow-hidden bg-surface-subtle">
+      <WorkshopSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar />
+
+        {/* Fixed header */}
+        <div className="shrink-0 px-6 pt-8 pb-4 lg:px-10">
           <h1 className="text-3xl font-bold text-ink">Pricing</h1>
-          <div className="space-y-3">
+          <div className="mt-4 space-y-3">
             <h2 className="text-lg font-bold text-ink">Stages</h2>
             <WorkshopStages activeStage="extraction" loading={loading} />
           </div>
-        </header>
+        </div>
 
-        <div className="mt-6 flex min-h-0 flex-1 gap-6">
-          {/* Queue panel */}
-          <div className="flex w-72 shrink-0 flex-col gap-3">
+        {/* Content area — no page scroll, both panels stretch equally */}
+        <div className="flex min-h-0 flex-1 gap-6 px-6 pb-6 lg:px-10">
+          {/* Queue panel — stretches to match extraction panel height */}
+          <div className="flex w-72 shrink-0 flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Queue ({loading ? fileNames.length : submittedJds.length})
@@ -175,7 +162,7 @@ export function ExtractionView({
               </ul>
             )}
 
-            <ul className="space-y-3">
+            <ul className="flex-1 min-h-0 overflow-y-auto space-y-2">
               {submittedJds.map((jd) => {
                 const isActive = jd.fileId === selectedId;
                 return (
@@ -184,17 +171,17 @@ export function ExtractionView({
                       type="button"
                       onClick={() => setSelectedId(jd.fileId)}
                       className={cn(
-                        "w-full rounded-card border bg-surface px-4 py-4 text-left shadow-card transition-colors",
+                        "w-full rounded-lg border bg-surface px-3 py-3 text-left transition-colors",
                         isActive
                           ? "border-l-4 border-sidebar-active"
                           : "border-line hover:border-sidebar-active/40",
                       )}
                     >
-                      <span className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                      <span className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50">
                           <DocumentIcon />
                         </span>
-                        <span className="min-w-0">
+                        <span className="min-w-0 flex-1">
                           <span
                             className={cn(
                               "block truncate text-sm font-semibold",
@@ -202,9 +189,6 @@ export function ExtractionView({
                             )}
                           >
                             {stripExtension(jd.fileName)}
-                          </span>
-                          <span className="block truncate text-xs text-ink-subtle">
-                            {jd.fileName}
                           </span>
                         </span>
                       </span>
@@ -214,7 +198,7 @@ export function ExtractionView({
               })}
             </ul>
 
-            <div className="mt-auto pt-4">
+            <div className="mt-auto shrink-0 pt-3">
               <Button variant="secondary" size="md" onClick={onBack}>
                 ← Back
               </Button>
@@ -236,8 +220,9 @@ export function ExtractionView({
 
           {/* Extraction panel */}
           {!loading && selected && fields ? (
-            <div className="flex flex-1 flex-col gap-6 overflow-y-auto">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-1 flex-col gap-4 min-h-0">
+              {/* Fixed: title + badge */}
+              <div className="shrink-0 flex items-center gap-3">
                 <h2 className="text-2xl font-bold text-sidebar">
                   {stripExtension(selected.fileName)}
                 </h2>
@@ -245,13 +230,13 @@ export function ExtractionView({
               </div>
 
               {fields.confidence < 0.4 && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  Low extraction confidence — some fields could not be detected automatically. You
-                  can still continue.
+                <div className="shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  Low extraction confidence — some fields could not be detected automatically. You can still continue.
                 </div>
               )}
 
-              <div className="rounded-card border border-line bg-surface p-6 shadow-card">
+              {/* Scrollable: extracted info card */}
+              <div className="flex-1 min-h-0 overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-card">
                 <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ink-muted">
                   Extracted Information
                 </h3>
@@ -297,7 +282,7 @@ export function ExtractionView({
                 )}
               </div>
 
-              <div className="mt-auto">
+              <div className="shrink-0 pt-2">
                 <Button size="lg" onClick={onContinue}>
                   Continue to Prompt Selection →
                 </Button>
@@ -306,6 +291,6 @@ export function ExtractionView({
           ) : null}
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }
