@@ -17,12 +17,14 @@ const DEFAULT_PROMPTS: StoredPrompt[] = [
   {
     id: "2",
     name: "Market Rate Analysis",
-    content: "Analyse the market rate for this role based on skills, experience, location, and industry sector. Provide competitive hourly pay and bill rates.",
+    content:
+      "Analyse the market rate for this role based on skills, experience, location, and industry sector. Provide competitive hourly pay and bill rates.",
   },
   {
     id: "3",
     name: "Compensation Extraction",
-    content: "Extract all role-specific compensation data, including base salary bands, bonus structures, and equity components for this position.",
+    content:
+      "Extract all role-specific compensation data, including base salary bands, bonus structures, and equity components for this position.",
   },
 ];
 
@@ -64,8 +66,6 @@ export function deletePrompt(id: string): void {
 }
 
 export function updatePrompt(id: string, name: string, content: string): void {
-  const prompts = read().map((p) =>
-    p.id === id ? { ...p, name, content } : p,
-  );
+  const prompts = read().map((p) => (p.id === id ? { ...p, name, content } : p));
   write(prompts);
 }
