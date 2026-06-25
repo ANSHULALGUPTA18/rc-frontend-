@@ -264,124 +264,151 @@ export function ApprovalQueueView(): React.ReactElement {
       </div>
 
       {/* Detail Popup */}
-      {detailItem && (() => {
-        const signals = detailItem.contributing_signals ?? [];
-        const keySkills = signals.find((s) => s.signal_type === "key_skills");
-        const marketFactors = signals.find((s) => s.signal_type === "market_factors");
-        const expLevel = signals.find((s) => s.signal_type === "experience_level");
+      {detailItem &&
+        (() => {
+          const signals = detailItem.contributing_signals ?? [];
+          const keySkills = signals.find((s) => s.signal_type === "key_skills");
+          const marketFactors = signals.find((s) => s.signal_type === "market_factors");
+          const expLevel = signals.find((s) => s.signal_type === "experience_level");
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setDetailItem(null)}>
-            <div className="mx-4 max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-ink">Pricing Recommendation Details</h2>
-                <button
-                  type="button"
-                  onClick={() => setDetailItem(null)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-ink-subtle hover:bg-surface-muted hover:text-ink"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="h-5 w-5">
-                    <path d="M18 6 6 18M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              onClick={() => setDetailItem(null)}
+            >
+              <div
+                className="mx-4 max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-ink">Pricing Recommendation Details</h2>
+                  <button
+                    type="button"
+                    onClick={() => setDetailItem(null)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md text-ink-subtle hover:bg-surface-muted hover:text-ink"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                    >
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-              {/* Submitted By */}
-              {detailItem.submitted_by_name && (
-                <div className="mb-4 rounded-lg border border-line bg-surface-muted p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Submitted By</p>
-                  <p className="mt-1 text-sm font-medium text-ink">{detailItem.submitted_by_name}</p>
-                  <p className="text-xs text-ink-muted">{detailItem.submitted_by_email}</p>
-                </div>
-              )}
+                {/* Submitted By */}
+                {detailItem.submitted_by_name && (
+                  <div className="mb-4 rounded-lg border border-line bg-surface-muted p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Submitted By
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-ink">
+                      {detailItem.submitted_by_name}
+                    </p>
+                    <p className="text-xs text-ink-muted">{detailItem.submitted_by_email}</p>
+                  </div>
+                )}
 
-              {/* Rate Cards */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="rounded-lg border border-line bg-surface-muted p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Pay Rate</p>
-                  <p className="mt-1 text-base font-bold text-ink">
-                    {fmtRate(detailItem.pay_rate_low)}-{fmtRate(detailItem.pay_rate_high)}/hr
-                  </p>
-                </div>
-                <div className="rounded-lg border border-line bg-surface-muted p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Bill Rate</p>
-                  <p className="mt-1 text-base font-bold text-ink">
-                    {fmtRate(detailItem.bill_rate_low)}-{fmtRate(detailItem.bill_rate_high)}/hr
-                  </p>
-                </div>
-                <div className="rounded-lg border border-line bg-surface-muted p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Confidence</p>
-                  <p className="mt-1 text-base font-bold text-ink">
-                    {Math.round(detailItem.confidence_score * 100)}%
-                  </p>
-                  <p className="text-xs text-ink-muted">
-                    Markup {parseFloat(detailItem.markup_pct).toFixed(1)}%
-                    {expLevel && ` • ${expLevel.description}`}
-                  </p>
-                </div>
-              </div>
-
-              {/* Pricing Rationale */}
-              {detailItem.explanation && (
-                <div className="mb-4 rounded-lg border border-line bg-blue-50 p-4">
-                  <h3 className="mb-2 text-sm font-bold text-ink">Pricing Rationale</h3>
-                  <p className="text-sm leading-relaxed text-ink-muted">{detailItem.explanation}</p>
-                </div>
-              )}
-
-              {/* Key Skills */}
-              {keySkills && (
-                <div className="mb-4">
-                  <h3 className="mb-2 text-sm font-bold text-ink">Key Skills (Rate Drivers)</h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {keySkills.description.split(", ").map((skill) => (
-                      <span
-                        key={skill}
-                        className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200"
-                      >
-                        {skill}
-                      </span>
-                    ))}
+                {/* Rate Cards */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="rounded-lg border border-line bg-surface-muted p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Pay Rate
+                    </p>
+                    <p className="mt-1 text-base font-bold text-ink">
+                      {fmtRate(detailItem.pay_rate_low)}-{fmtRate(detailItem.pay_rate_high)}/hr
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-line bg-surface-muted p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Bill Rate
+                    </p>
+                    <p className="mt-1 text-base font-bold text-ink">
+                      {fmtRate(detailItem.bill_rate_low)}-{fmtRate(detailItem.bill_rate_high)}/hr
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-line bg-surface-muted p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                      Confidence
+                    </p>
+                    <p className="mt-1 text-base font-bold text-ink">
+                      {Math.round(detailItem.confidence_score * 100)}%
+                    </p>
+                    <p className="text-xs text-ink-muted">
+                      Markup {parseFloat(detailItem.markup_pct).toFixed(1)}%
+                      {expLevel && ` • ${expLevel.description}`}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              {/* Market Factors */}
-              {marketFactors && (
-                <div className="mb-4">
-                  <h3 className="mb-2 text-sm font-bold text-ink">Market Factors</h3>
-                  <ul className="space-y-1">
-                    {marketFactors.description.split("; ").map((factor, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-ink-muted">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
-                        {factor}
-                      </li>
-                    ))}
-                  </ul>
+                {/* Pricing Rationale */}
+                {detailItem.explanation && (
+                  <div className="mb-4 rounded-lg border border-line bg-blue-50 p-4">
+                    <h3 className="mb-2 text-sm font-bold text-ink">Pricing Rationale</h3>
+                    <p className="text-sm leading-relaxed text-ink-muted">
+                      {detailItem.explanation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Key Skills */}
+                {keySkills && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 text-sm font-bold text-ink">Key Skills (Rate Drivers)</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {keySkills.description.split(", ").map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Market Factors */}
+                {marketFactors && (
+                  <div className="mb-4">
+                    <h3 className="mb-2 text-sm font-bold text-ink">Market Factors</h3>
+                    <ul className="space-y-1">
+                      {marketFactors.description.split("; ").map((factor, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-ink-muted">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
+                          {factor}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* JD ID */}
+                <div className="rounded-lg border border-line bg-surface-muted p-3">
+                  <p className="text-xs text-ink-muted">
+                    <span className="font-semibold">JD ID:</span> {detailItem.jd_id}
+                  </p>
+                  <p className="text-xs text-ink-muted">
+                    <span className="font-semibold">Recommendation ID:</span> {detailItem.id}
+                  </p>
                 </div>
-              )}
 
-              {/* JD ID */}
-              <div className="rounded-lg border border-line bg-surface-muted p-3">
-                <p className="text-xs text-ink-muted">
-                  <span className="font-semibold">JD ID:</span> {detailItem.jd_id}
-                </p>
-                <p className="text-xs text-ink-muted">
-                  <span className="font-semibold">Recommendation ID:</span> {detailItem.id}
-                </p>
-              </div>
-
-              {/* Close button */}
-              <div className="mt-5 flex justify-end">
-                <Button variant="secondary" size="sm" onClick={() => setDetailItem(null)}>
-                  Close
-                </Button>
+                {/* Close button */}
+                <div className="mt-5 flex justify-end">
+                  <Button variant="secondary" size="sm" onClick={() => setDetailItem(null)}>
+                    Close
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </AppShell>
   );
 }
