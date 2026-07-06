@@ -14,7 +14,7 @@
 import { useCallback, useState } from "react";
 import { MAX_JD_FILE_BYTES, type SelectedJdFile } from "@/features/jd-upload/types";
 
-const MAX_JD_FILES = 5;
+const MAX_JD_FILES = 20;
 
 interface UseJdUploadResult {
   files: SelectedJdFile[];

@@ -5,8 +5,13 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
 import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { ExtractionResults } from "@/features/jd-upload/components/ExtractionResults";
 import { TopBar } from "@/components/layout/TopBar";
-import type { SubmittedJd } from "@/features/jd-upload/types";
+import type {
+  ExtractionStatus,
+  FileExtractionProgress,
+  SubmittedJd,
+} from "@/features/jd-upload/types";
 
 function DocumentIcon(): React.ReactElement {
   return (
@@ -68,10 +73,104 @@ function stripExtension(name: string): string {
   return name.replace(/\.[^.]+$/, "");
 }
 
+/** Status glyph for a PDF in the batch progress list. */
+function StatusIcon({ status }: { status: ExtractionStatus }): React.ReactElement {
+  if (status === "completed") {
+    return (
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5 text-green-600">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === "processing") {
+    return (
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-sidebar-active">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      </span>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-3.5 w-3.5 text-red-600">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </span>
+    );
+  }
+  // pending
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-muted">
+      <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle" />
+    </span>
+  );
+}
+
+const STATUS_LABEL: Record<ExtractionStatus, string> = {
+  pending: "Waiting…",
+  processing: "Processing…",
+  completed: "",
+  failed: "Failed",
+};
+
+/** One row in the live batch progress list. */
+function FileProgressRow({
+  entry,
+  onRetry,
+}: {
+  entry: FileExtractionProgress;
+  onRetry?: (fileId: string) => void;
+}): React.ReactElement {
+  const subtitle =
+    entry.status === "completed"
+      ? `${entry.positionCount} position${entry.positionCount === 1 ? "" : "s"}`
+      : entry.status === "failed"
+        ? entry.error ?? STATUS_LABEL.failed
+        : STATUS_LABEL[entry.status];
+
+  return (
+    <div className="w-full rounded-lg border border-line bg-surface px-3 py-2.5 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <StatusIcon status={entry.status} />
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-ink">
+            {stripExtension(entry.fileName)}
+          </span>
+          <span
+            className={cn(
+              "block truncate text-xs",
+              entry.status === "failed" ? "text-red-600" : "text-ink-subtle",
+            )}
+          >
+            {subtitle}
+          </span>
+        </div>
+        {entry.status === "failed" && onRetry && (
+          <button
+            type="button"
+            onClick={() => onRetry(entry.fileId)}
+            className="shrink-0 rounded-md border border-sidebar-active/40 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ExtractionViewProps {
   submittedJds: SubmittedJd[];
   loading?: boolean;
   fileNames?: string[];
+  /** Live per-PDF status during batch extraction (empty for the single-file path). */
+  fileProgress?: FileExtractionProgress[];
+  /** Retry one failed PDF (fileId from fileProgress). */
+  onRetryFile?: (fileId: string) => void;
   onBack: () => void;
   onContinue: () => void;
 }
@@ -106,6 +205,8 @@ export function ExtractionView({
   submittedJds,
   loading = false,
   fileNames = [],
+  fileProgress = [],
+  onRetryFile,
   onBack,
   onContinue,
 }: ExtractionViewProps): React.ReactElement {
@@ -113,6 +214,14 @@ export function ExtractionView({
 
   const selected = submittedJds.find((j) => j.fileId === selectedId) ?? submittedJds[0];
   const fields = selected?.extractedFields;
+
+  // Batch mode: multiple PDFs tracked via the worker pool. The single-file path
+  // leaves fileProgress empty and falls back to the plain skeleton.
+  const isBatch = fileProgress.length > 0;
+  const settledCount = fileProgress.filter(
+    (p) => p.status === "completed" || p.status === "failed",
+  ).length;
+  const failedProgress = fileProgress.filter((p) => p.status === "failed");
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-subtle">
@@ -127,20 +236,60 @@ export function ExtractionView({
             <h2 className="text-lg font-bold text-ink">Stages</h2>
             <WorkshopStages activeStage="extraction" loading={loading} />
           </div>
+          {isBatch && (
+            <p className="mt-3 text-sm text-ink-muted">
+              {loading
+                ? `Processing ${settledCount} of ${fileProgress.length} files — ${submittedJds.length} position${submittedJds.length === 1 ? "" : "s"} extracted so far`
+                : `${fileProgress.length - failedProgress.length} of ${fileProgress.length} files processed — ${submittedJds.length} position${submittedJds.length === 1 ? "" : "s"} extracted${failedProgress.length > 0 ? `, ${failedProgress.length} failed` : ""}`}
+            </p>
+          )}
         </div>
 
-        {/* Content area — no page scroll, both panels stretch equally */}
-        <div className="flex min-h-0 flex-1 gap-6 px-6 pb-6 lg:px-10">
+        {/* Content area — no page scroll */}
+        <div className="flex min-h-0 flex-1 flex-col px-6 pb-6 lg:px-10">
+        {/* Batch mode, after extraction: organize positions by source PDF */}
+        {isBatch && !loading ? (
+          <ExtractionResults
+            submittedJds={submittedJds}
+            fileProgress={fileProgress}
+            onRetryFile={onRetryFile}
+            onBack={onBack}
+            onContinue={onContinue}
+          />
+        ) : (
+        <div className="flex min-h-0 flex-1 gap-6">
           {/* Queue panel — stretches to match extraction panel height */}
           <div className="flex w-72 shrink-0 flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Queue ({loading ? fileNames.length : submittedJds.length})
+                Queue ({isBatch && loading ? fileProgress.length : submittedJds.length})
               </span>
             </div>
 
-            {/* Show file names as placeholders while loading */}
-            {loading && fileNames.length > 0 && (
+            {/* Batch mode: live per-PDF status list (during extraction) */}
+            {isBatch && loading && (
+              <ul className="flex-1 min-h-0 overflow-y-auto space-y-2">
+                {fileProgress.map((p) => (
+                  <li key={p.fileId}>
+                    <FileProgressRow entry={p} onRetry={onRetryFile} />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Batch mode: failed PDFs with retry (after extraction) */}
+            {isBatch && !loading && failedProgress.length > 0 && (
+              <ul className="shrink-0 space-y-2 pb-1">
+                {failedProgress.map((p) => (
+                  <li key={p.fileId}>
+                    <FileProgressRow entry={p} onRetry={onRetryFile} />
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Single-file placeholder while loading */}
+            {loading && !isBatch && fileNames.length > 0 && (
               <ul className="space-y-3">
                 {fileNames.map((name, i) => (
                   <li key={i}>
@@ -162,6 +311,8 @@ export function ExtractionView({
               </ul>
             )}
 
+            {/* JD browser — hidden during batch extraction (shown once done) */}
+            {!(isBatch && loading) && (
             <ul className="flex-1 min-h-0 overflow-y-auto space-y-2">
               {submittedJds.map((jd) => {
                 const isActive = jd.fileId === selectedId;
@@ -197,6 +348,7 @@ export function ExtractionView({
                 );
               })}
             </ul>
+            )}
 
             <div className="mt-auto shrink-0 pt-3">
               <Button variant="secondary" size="md" onClick={onBack}>
@@ -205,8 +357,45 @@ export function ExtractionView({
             </div>
           </div>
 
-          {/* Loading skeleton */}
-          {loading && (
+          {/* Right panel while extracting: batch progress summary or single-file skeleton */}
+          {loading && isBatch && (
+            <div className="flex flex-1 items-start justify-center">
+              <div className="w-full max-w-md rounded-card border border-line bg-surface p-8 shadow-card">
+                <div className="flex justify-center">
+                  <div className="relative flex h-14 w-14 items-center justify-center">
+                    <span className="absolute inset-0 animate-ping rounded-full bg-sidebar-active opacity-10" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="relative h-7 w-7 animate-spin text-sidebar-active">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                  </div>
+                </div>
+                <h2 className="mt-4 text-center text-lg font-bold text-ink">
+                  Extracting positions
+                </h2>
+                <p className="mt-1 text-center text-sm text-ink-muted">
+                  Processing up to 5 files at a time. You can watch progress in the queue.
+                </p>
+                <div className="mt-5">
+                  <div className="mb-1.5 flex justify-between text-xs text-ink-muted">
+                    <span>{settledCount} of {fileProgress.length} files</span>
+                    <span>{submittedJds.length} position{submittedJds.length === 1 ? "" : "s"}</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                    <div
+                      className="h-full rounded-full bg-sidebar-active transition-all duration-300"
+                      style={{ width: `${fileProgress.length ? (settledCount / fileProgress.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+                <p className="mt-5 text-center text-xs text-ink-subtle">
+                  Do not close this tab while processing is in progress.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Single-file loading skeleton */}
+          {loading && !isBatch && (
             <div className="flex flex-1 flex-col gap-6">
               <div className="flex items-center gap-3">
                 <div className="h-7 w-64 animate-pulse rounded bg-surface-muted" />
@@ -289,6 +478,8 @@ export function ExtractionView({
               </div>
             </div>
           ) : null}
+        </div>
+        )}
         </div>
       </div>
     </div>

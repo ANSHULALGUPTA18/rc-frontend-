@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils/cn";
 
 interface JdUploadViewProps {
   onContinue?: (files: SelectedJdFile[]) => void;
+  loading?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -84,6 +85,7 @@ function TabButton({
 
 export function JdUploadView({
   onContinue,
+  loading = false,
 }: JdUploadViewProps): React.ReactElement {
   const { files, canContinue, isFull, addFiles, removeFile, clear } = useJdUpload();
   const [activeTab, setActiveTab] = useState<InputTab>("file");
@@ -147,7 +149,7 @@ export function JdUploadView({
               <CardContent className="space-y-4">
                 {isFull ? (
                   <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                    Maximum 5 JDs allowed per upload. Ready to continue.
+                    Maximum 20 JDs allowed per upload. Ready to continue.
                   </div>
                 ) : (
                 <>
@@ -166,7 +168,7 @@ export function JdUploadView({
                     multiple
                     accept={ACCEPTED_JD_MIME}
                     title="Click or drag & drop multiple files"
-                    hint={`Supports PDF, DOCX, TXT — Max 10MB each — ${files.length}/5 added`}
+                    hint={`Supports PDF, DOCX, TXT — Max 10MB each — ${files.length}/20 added`}
                     onFilesSelected={addFiles}
                   />
                 )}
@@ -247,22 +249,42 @@ export function JdUploadView({
             <div className="shrink-0">
             <Button
               size="lg"
-              disabled={!canProceed}
+              disabled={!canProceed || loading}
               onClick={handleContinue}
             >
-              Continue
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="h-4 w-4"
-              >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
+              {loading ? (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="h-4 w-4 animate-spin"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  Analyzing document…
+                </>
+              ) : (
+                <>
+                  Continue
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </>
+              )}
             </Button>
             </div>
           </div>

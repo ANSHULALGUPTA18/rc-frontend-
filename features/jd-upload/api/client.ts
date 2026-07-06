@@ -18,12 +18,18 @@ import { apiFetch } from "@/lib/api/client";
 import { IS_MOCK } from "@/lib/api/config";
 import type { MsalTokenContext } from "@/lib/auth/token-storage";
 import type {
+  ConfirmPositionItem,
+  ConfirmedJD,
   ContributingSignal,
+  DetectedPosition,
   ExtractedFields,
   JdStatus,
   JdStatusResponse,
+  PreflightResult,
   PricingRecommendation,
+  PricingVersion,
   ResolvedPromptConfig,
+  SmartUploadResponse,
   SubmittedJd,
 } from "@/features/jd-upload/types";
 
@@ -274,12 +280,254 @@ export async function priceJd(
     method: "POST",
     body: JSON.stringify({
       prompt_content: promptConfig.promptContent,
+      prompt_name: promptConfig.promptName ?? null,
       location_override: promptConfig.locationOverride,
       sector_override: promptConfig.sectorOverride,
     }),
     msal,
   });
   return { jdId: res.jd_id, status: res.status };
+}
+
+export async function getPricingHistory(
+  jdId: string,
+  msal?: MsalTokenContext,
+): Promise<PricingVersion[]> {
+  if (IS_MOCK) {
+    return [];
+  }
+  const res = await apiFetch<{
+    id: string;
+    version_number: number;
+    prompt_name: string | null;
+    prompt_snapshot: string | null;
+    pay_rate_low: string;
+    pay_rate_high: string;
+    bill_rate_low: string;
+    bill_rate_high: string;
+    markup_pct: string;
+    confidence_score: number;
+    explanation: string | null;
+    submission_status: string;
+    created_at: string;
+  }[]>(`/v1/jds/${jdId}/pricing-history`, { msal });
+
+  return res.map((v) => ({
+    id: v.id,
+    versionNumber: v.version_number,
+    promptName: v.prompt_name,
+    promptSnapshot: v.prompt_snapshot,
+    payRateLow: v.pay_rate_low,
+    payRateHigh: v.pay_rate_high,
+    billRateLow: v.bill_rate_low,
+    billRateHigh: v.bill_rate_high,
+    markupPct: v.markup_pct,
+    confidenceScore: v.confidence_score,
+    explanation: v.explanation,
+    submissionStatus: v.submission_status,
+    createdAt: v.created_at,
+  }));
+}
+
+// ─── Pre-flight detection ─────────────────────────────────────────────────────
+
+export async function preflight(
+  file: File,
+  msal?: MsalTokenContext,
+): Promise<PreflightResult> {
+  if (IS_MOCK) {
+    return {
+      filename: file.name,
+      pageCount: 3,
+      isImagePdf: false,
+      needsVision: false,
+    };
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await apiFetch<{
+    filename: string;
+    page_count: number;
+    is_image_pdf: boolean;
+    needs_vision: boolean;
+  }>("/v1/jds/preflight", {
+    method: "POST",
+    body: form,
+    msal,
+  });
+
+  return {
+    filename: res.filename,
+    pageCount: res.page_count,
+    isImagePdf: res.is_image_pdf,
+    needsVision: res.needs_vision,
+  };
+}
+
+// ─── Smart upload (multi-position) ───────────────────────────────────────────
+
+interface RawDetectedPosition {
+  temp_id: string;
+  title: string | null;
+  location: string | null;
+  experience_level: string | null;
+  employment_type: string | null;
+  sector: string | null;
+  client: string | null;
+  skills: string[];
+  mandatory_skills: string[];
+  raw_text: string;
+  detection_source: string;
+}
+
+interface RawSmartUploadResponse {
+  source_filename: string;
+  positions: RawDetectedPosition[];
+}
+
+interface RawConfirmedJD {
+  jd_id: string;
+  status: string;
+  temp_id: string;
+  extracted_fields: RawExtractedFields;
+}
+
+const MOCK_MULTI_POSITIONS: DetectedPosition[] = [
+  {
+    tempId: "pos_0",
+    title: "Project Manager",
+    location: "Vermont, USA",
+    experienceLevel: "Senior",
+    employmentType: "Contract",
+    sector: "Government",
+    client: "State of Vermont",
+    skills: ["Azure DevOps", "Agile", "PMP", "Microsoft Project", "Stakeholder Management"],
+    mandatorySkills: ["PMP"],
+    rawText: "Project Manager\nThe State follows the EPMO project hybrid methodology...",
+    detectionSource: "gemini",
+  },
+  {
+    tempId: "pos_1",
+    title: "Technical Analyst",
+    location: "Vermont, USA",
+    experienceLevel: "Mid",
+    employmentType: "Contract",
+    sector: "Government",
+    client: "State of Vermont",
+    skills: ["SQL", "Business Analysis", "JIRA", "Visio", "Requirements Gathering"],
+    mandatorySkills: [],
+    rawText: "Technical Analyst\nMinimum 10 years experience in technical analysis...",
+    detectionSource: "gemini",
+  },
+  {
+    tempId: "pos_2",
+    title: "Salesforce Developer",
+    location: "Vermont, USA",
+    experienceLevel: "Senior",
+    employmentType: "Contract",
+    sector: "Government",
+    client: "State of Vermont",
+    skills: ["Apex", "SOQL", "REST APIs", "VisualForce", "Salesforce Lightning"],
+    mandatorySkills: ["Apex", "SOQL"],
+    rawText: "Salesforce Developer\nExperience with Salesforce platform development...",
+    detectionSource: "gemini",
+  },
+];
+
+export async function smartUpload(
+  file: File,
+  msal?: MsalTokenContext,
+): Promise<SmartUploadResponse> {
+  if (IS_MOCK) {
+    return {
+      sourceFilename: file.name,
+      positions: MOCK_MULTI_POSITIONS,
+    };
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await apiFetch<RawSmartUploadResponse>("/v1/jds/smart-upload", {
+    method: "POST",
+    body: form,
+    msal,
+  });
+
+  return {
+    sourceFilename: res.source_filename,
+    positions: res.positions.map((p) => {
+      const src = p.detection_source;
+      const detectionSource: DetectedPosition["detectionSource"] =
+        src === "heading_split" ? "heading_split"
+        : src === "vision" ? "vision"
+        : "gemini";
+      return {
+        tempId: p.temp_id,
+        title: p.title,
+        location: p.location,
+        experienceLevel: p.experience_level,
+        employmentType: p.employment_type,
+        sector: p.sector,
+        client: p.client,
+        skills: p.skills,
+        mandatorySkills: p.mandatory_skills,
+        rawText: p.raw_text,
+        detectionSource,
+      };
+    }),
+  };
+}
+
+export async function confirmPositions(
+  positions: ConfirmPositionItem[],
+  msal?: MsalTokenContext,
+): Promise<ConfirmedJD[]> {
+  if (IS_MOCK) {
+    return positions.map((p) => ({
+      jdId: crypto.randomUUID(),
+      status: "queued",
+      tempId: p.tempId,
+      extractedFields: {
+        jobTitle: p.title,
+        experienceRequired: "5+ years",
+        skills: ["Python", "FastAPI"],
+        mandatorySkills: [],
+        location: "Remote",
+        employmentType: "Contract",
+        sector: "Technology",
+        confidence: 0.75,
+      },
+    }));
+  }
+
+  const res = await apiFetch<RawConfirmedJD[]>("/v1/jds/confirm-positions", {
+    method: "POST",
+    body: JSON.stringify({
+      positions: positions.map((p) => ({
+        temp_id: p.tempId,
+        title: p.title,
+        raw_text: p.rawText,
+        location: p.location,
+        sector: p.sector,
+        skills: p.skills,
+        mandatory_skills: p.mandatorySkills,
+        experience_level: p.experienceLevel,
+        employment_type: p.employmentType,
+        detection_source: p.detectionSource as string,
+      })),
+    }),
+    msal,
+  });
+
+  return res.map((item) => ({
+    jdId: item.jd_id,
+    status: item.status,
+    tempId: item.temp_id,
+    extractedFields: mapExtractedFields(item.extracted_fields),
+  }));
 }
 
 export async function submitForApproval(

@@ -10,7 +10,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
-import type { ResolvedPromptConfig, SelectedJdFile, SubmittedJd } from "@/features/jd-upload/types";
+import type { ResolvedPromptConfig, SubmittedJd } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   { id: "1", name: "Public Sector Rate", content: "Please provide the public sector hourly pay rate of this position." },
@@ -96,36 +96,46 @@ function ChevronDownIcon(): React.ReactElement {
 }
 
 interface PromptSelectionViewProps {
-  files: SelectedJdFile[];
   submittedJds?: SubmittedJd[];
   onBack: () => void;
   /** Called with a config entry per fileId when the recruiter clicks Continue. */
   onContinue: (configs: Record<string, ResolvedPromptConfig>) => void;
 }
 
+/** A queue item is either a single file or one of N extracted positions. */
+interface QueueItem {
+  id: string;       // fileId used as config key
+  label: string;    // display name
+}
+
 export function PromptSelectionView({
-  files,
   submittedJds = [],
   onBack,
   onContinue,
 }: PromptSelectionViewProps): React.ReactElement {
-  const [selectedId, setSelectedId] = useState<string>(files[0]?.id ?? "");
+  // The queue is always driven by the created JDs — configs must be keyed by
+  // jd.fileId so RecommendationsView can look each one up for pricing. One PDF
+  // may contribute several JDs (multi-position).
+  const queueItems: QueueItem[] = submittedJds.map((jd) => ({
+    id: jd.fileId,
+    label: stripExtension(jd.fileName),
+  }));
 
-  // Build a lookup: fileId → extracted fields
-  const extractedByFileId = Object.fromEntries(
-    submittedJds.map((jd) => [jd.fileId, jd.extractedFields]),
-  );
+  // More than one JD in the queue — show the "Apply to all" affordances.
+  const isMulti = queueItems.length > 1;
+
+  const [selectedId, setSelectedId] = useState<string>(queueItems[0]?.id ?? "");
 
   const [configs, setConfigs] = useState<Record<string, FileConfig>>(() =>
     Object.fromEntries(
-      files.map((f) => {
-        const extracted = extractedByFileId[f.id];
+      queueItems.map((item) => {
+        const jd = submittedJds.find((j) => j.fileId === item.id);
         return [
-          f.id,
+          item.id,
           {
             ...defaultConfig(),
-            location: extracted?.location ?? "",
-            sector: extracted?.sector ?? "",
+            location: jd?.extractedFields?.location ?? "",
+            sector: jd?.extractedFields?.sector ?? "",
           },
         ];
       }),
@@ -145,8 +155,39 @@ export function PromptSelectionView({
     }));
   };
 
-  const selected = files.find((f) => f.id === selectedId) ?? files[0];
-  const cfg = selected ? (configs[selected.id] ?? defaultConfig()) : null;
+  /** Copy location + sector from the currently selected item to every other item. */
+  const applyLocationSectorToAll = (): void => {
+    const source = configs[selectedId];
+    if (!source) return;
+    setConfigs((prev) => {
+      const next = { ...prev };
+      for (const item of queueItems) {
+        next[item.id] = { ...next[item.id], location: source.location, sector: source.sector };
+      }
+      return next;
+    });
+  };
+
+  /** Copy the prompt (mode + template + custom text) from the selected item to all. */
+  const applyPromptToAll = (): void => {
+    const source = configs[selectedId];
+    if (!source) return;
+    setConfigs((prev) => {
+      const next = { ...prev };
+      for (const item of queueItems) {
+        next[item.id] = {
+          ...next[item.id],
+          promptMode: source.promptMode,
+          promptTemplateId: source.promptTemplateId,
+          customContent: source.customContent,
+        };
+      }
+      return next;
+    });
+  };
+
+  const selectedItem = queueItems.find((q) => q.id === selectedId) ?? queueItems[0];
+  const cfg = selectedItem ? (configs[selectedItem.id] ?? defaultConfig()) : null;
   const activeTpl = promptOptions.find(
     (t) => t.id === cfg?.promptTemplateId,
   ) ?? promptOptions[0];
@@ -175,18 +216,20 @@ export function PromptSelectionView({
           <div className="flex w-72 shrink-0 flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Queue ({files.length})
+                {`Queue (${queueItems.length})`}
               </span>
             </div>
 
             <ul className="flex-1 min-h-0 overflow-y-auto space-y-2">
-              {files.map((f) => {
-                const isActive = f.id === selectedId;
+              {queueItems.map((item) => {
+                const isActive = item.id === selectedId;
+                const itemCfg = configs[item.id];
+                const incomplete = !itemCfg?.location.trim() || !itemCfg?.sector.trim();
                 return (
-                  <li key={f.id}>
+                  <li key={item.id}>
                     <button
                       type="button"
-                      onClick={() => setSelectedId(f.id)}
+                      onClick={() => setSelectedId(item.id)}
                       className={cn(
                         "w-full rounded-lg border bg-surface px-3 py-3 text-left transition-colors",
                         isActive
@@ -205,8 +248,11 @@ export function PromptSelectionView({
                               isActive ? "text-sidebar-active" : "text-ink",
                             )}
                           >
-                            {stripExtension(f.file.name)}
+                            {item.label}
                           </span>
+                          {incomplete && (
+                            <span className="mt-0.5 block text-xs text-red-500">Missing fields</span>
+                          )}
                         </span>
                       </span>
                     </button>
@@ -223,10 +269,10 @@ export function PromptSelectionView({
           </div>
 
           {/* Config panel */}
-          {selected && cfg ? (
+          {selectedItem && cfg ? (
             <div className="flex flex-1 flex-col gap-4 min-h-0">
               <h2 className="text-2xl font-bold text-sidebar">
-                {stripExtension(selected.file.name)}
+                {selectedItem.label}
               </h2>
 
               <div className="flex-1 min-h-0 overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-card">
@@ -241,7 +287,7 @@ export function PromptSelectionView({
                         key={mode}
                         type="button"
                         onClick={() =>
-                          patchConfig(selected.id, { promptMode: mode })
+                          patchConfig(selectedItem.id, { promptMode: mode })
                         }
                         className={cn(
                           "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
@@ -256,6 +302,21 @@ export function PromptSelectionView({
                   </div>
                 </div>
 
+                {isMulti && (
+                  <div className="mb-4 flex items-center justify-between rounded-lg border border-line bg-surface-subtle px-3 py-2">
+                    <span className="text-xs text-ink-muted">
+                      Use this prompt for every position in the queue.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={applyPromptToAll}
+                      className="shrink-0 rounded-md border border-sidebar-active/40 bg-blue-50 px-3 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
+                    >
+                      Apply prompt to all
+                    </button>
+                  </div>
+                )}
+
                 {cfg.promptMode === "default" ? (
                   <div className="space-y-4">
                     {/* Prompt Template dropdown */}
@@ -269,7 +330,7 @@ export function PromptSelectionView({
                         <select
                           value={cfg.promptTemplateId}
                           onChange={(e) =>
-                            patchConfig(selected.id, {
+                            patchConfig(selectedItem.id, {
                               promptTemplateId: e.target.value,
                               previewEditing: false,
                             })
@@ -295,7 +356,7 @@ export function PromptSelectionView({
                         <button
                           type="button"
                           onClick={() =>
-                            patchConfig(selected.id, {
+                            patchConfig(selectedItem.id, {
                               previewEditing: !cfg.previewEditing,
                             })
                           }
@@ -330,7 +391,7 @@ export function PromptSelectionView({
                     <textarea
                       value={cfg.customContent}
                       onChange={(e) =>
-                        patchConfig(selected.id, {
+                        patchConfig(selectedItem.id, {
                           customContent: e.target.value,
                         })
                       }
@@ -346,50 +407,65 @@ export function PromptSelectionView({
                 )}
 
                 {/* Location + Sector (mandatory) */}
-                <div className="mt-5 grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-ink">
-                      Location <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={cfg.location}
-                      onChange={(e) =>
-                        patchConfig(selected.id, { location: e.target.value })
-                      }
-                      placeholder="Enter Location Here"
-                      className={cn(
-                        "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
-                        !cfg.location.trim()
-                          ? "border-red-300 focus:border-red-400 focus:ring-red-300"
-                          : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                <div className="mt-5 space-y-3">
+                  {isMulti && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-ink">Location &amp; Sector</span>
+                      <button
+                        type="button"
+                        onClick={applyLocationSectorToAll}
+                        disabled={!cfg.location.trim() && !cfg.sector.trim()}
+                        className="rounded-md border border-sidebar-active/40 bg-blue-50 px-3 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Apply to all positions
+                      </button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-ink">
+                        Location <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={cfg.location}
+                        onChange={(e) =>
+                          patchConfig(selectedItem.id, { location: e.target.value })
+                        }
+                        placeholder="Enter Location Here"
+                        className={cn(
+                          "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
+                          !cfg.location.trim()
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-300"
+                            : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                        )}
+                      />
+                      {!cfg.location.trim() && (
+                        <p className="text-xs text-red-500">Location is required</p>
                       )}
-                    />
-                    {!cfg.location.trim() && (
-                      <p className="text-xs text-red-500">Location is required</p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium text-ink">
-                      Sector <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={cfg.sector}
-                      onChange={(e) =>
-                        patchConfig(selected.id, { sector: e.target.value })
-                      }
-                      placeholder="e.g. Healthcare, Finance, Technology"
-                      className={cn(
-                        "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
-                        !cfg.sector.trim()
-                          ? "border-red-300 focus:border-red-400 focus:ring-red-300"
-                          : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-ink">
+                        Sector <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={cfg.sector}
+                        onChange={(e) =>
+                          patchConfig(selectedItem.id, { sector: e.target.value })
+                        }
+                        placeholder="e.g. Healthcare, Finance, Technology"
+                        className={cn(
+                          "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
+                          !cfg.sector.trim()
+                            ? "border-red-300 focus:border-red-400 focus:ring-red-300"
+                            : "border-line focus:border-sidebar-active focus:ring-sidebar-active",
+                        )}
+                      />
+                      {!cfg.sector.trim() && (
+                        <p className="text-xs text-red-500">Sector is required</p>
                       )}
-                    />
-                    {!cfg.sector.trim() && (
-                      <p className="text-xs text-red-500">Sector is required</p>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -398,12 +474,12 @@ export function PromptSelectionView({
                 <Button
                   size="lg"
                   onClick={() => {
-                    // Validate all files have location + sector
+                    // Validate all queue items have location + sector
                     const missing: string[] = [];
-                    for (const f of files) {
-                      const c = configs[f.id] ?? defaultConfig();
-                      if (!c.location.trim()) missing.push(`${stripExtension(f.file.name)}: Location`);
-                      if (!c.sector.trim()) missing.push(`${stripExtension(f.file.name)}: Sector`);
+                    for (const item of queueItems) {
+                      const c = configs[item.id] ?? defaultConfig();
+                      if (!c.location.trim()) missing.push(`${item.label}: Location`);
+                      if (!c.sector.trim()) missing.push(`${item.label}: Sector`);
                     }
                     if (missing.length > 0) {
                       alert(`Please fill in the required fields:\n\n${missing.join("\n")}`);
@@ -411,14 +487,15 @@ export function PromptSelectionView({
                     }
 
                     const resolved: Record<string, ResolvedPromptConfig> = {};
-                    for (const f of files) {
-                      const cfg = configs[f.id] ?? defaultConfig();
-                      const tpl = promptOptions.find((t) => t.id === cfg.promptTemplateId) ?? promptOptions[0];
-                      resolved[f.id] = {
-                        promptTemplateId: cfg.promptMode === "default" ? cfg.promptTemplateId : null,
-                        promptContent: cfg.promptMode === "custom" ? cfg.customContent : (tpl?.content ?? ""),
-                        locationOverride: cfg.location.trim() || null,
-                        sectorOverride: cfg.sector.trim() || null,
+                    for (const item of queueItems) {
+                      const c = configs[item.id] ?? defaultConfig();
+                      const tpl = promptOptions.find((t) => t.id === c.promptTemplateId) ?? promptOptions[0];
+                      resolved[item.id] = {
+                        promptTemplateId: c.promptMode === "default" ? c.promptTemplateId : null,
+                        promptContent: c.promptMode === "custom" ? c.customContent : (tpl?.content ?? ""),
+                        promptName: c.promptMode === "custom" ? "Custom Prompt" : (tpl?.name ?? null),
+                        locationOverride: c.location.trim() || null,
+                        sectorOverride: c.sector.trim() || null,
                       };
                     }
                     onContinue(resolved);
