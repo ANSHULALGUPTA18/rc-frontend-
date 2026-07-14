@@ -2,7 +2,13 @@ node_modules
 .next
 .git
 .github
-*.env*
+
+# ALL secret / environment files — never baked into the image.
+# NEXT_PUBLIC_* vars are injected as --build-arg at build time, not via files.
+*.env
+*.env.*
+.env
+.env.*
 !.env.example
 coverage
 playwright-report

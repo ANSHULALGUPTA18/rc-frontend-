@@ -15,7 +15,8 @@
  */
 
 import { apiFetch } from "@/lib/api/client";
-import { IS_MOCK } from "@/lib/api/config";
+import { API_BASE, IS_MOCK } from "@/lib/api/config";
+import { getAccessToken } from "@/lib/auth/token-storage";
 import type { MsalTokenContext } from "@/lib/auth/token-storage";
 import type {
   ConfirmPositionItem,
@@ -547,4 +548,84 @@ export async function submitForApproval(
     },
   );
   return { approvalId: res.approval_id, status: res.status };
+}
+
+// ─── Pricing Excel export ─────────────────────────────────────────────────────
+
+/** One row in the exported rate card (camelCase; mapped to snake_case on send). */
+export interface PricingExportRow {
+  position: string | null;
+  sourcePdf: string | null;
+  location: string | null;
+  sector: string | null;
+  experience: string | null;
+  skills: string | null;
+  payRateLow: number | null;
+  payRateHigh: number | null;
+  billRateLow: number | null;
+  billRateHigh: number | null;
+  markupPct: number | null;
+  confidence: number | null;
+  prompt: string | null;
+  rationale: string | null;
+  status: string | null;
+  pricedOn: string | null;
+}
+
+/**
+ * Download the current batch of pricing recommendations as an .xlsx file.
+ * Posts the on-screen rows to the backend, which returns a styled workbook;
+ * this then triggers a browser download.
+ */
+export async function exportPricingExcel(
+  rows: PricingExportRow[],
+  msal?: MsalTokenContext,
+): Promise<void> {
+  const body = {
+    rows: rows.map((r) => ({
+      position: r.position,
+      source_pdf: r.sourcePdf,
+      location: r.location,
+      sector: r.sector,
+      experience: r.experience,
+      skills: r.skills,
+      pay_rate_low: r.payRateLow,
+      pay_rate_high: r.payRateHigh,
+      bill_rate_low: r.billRateLow,
+      bill_rate_high: r.billRateHigh,
+      markup_pct: r.markupPct,
+      confidence: r.confidence,
+      prompt: r.prompt,
+      rationale: r.rationale,
+      status: r.status,
+      priced_on: r.pricedOn,
+    })),
+  };
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (!IS_MOCK) {
+    const token = await getAccessToken(msal);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${API_BASE}/v1/jds/pricing-export`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] ?? "pricing_recommendations.xlsx";
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

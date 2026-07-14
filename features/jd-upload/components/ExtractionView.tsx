@@ -10,6 +10,8 @@ import { TopBar } from "@/components/layout/TopBar";
 import type {
   ExtractionStatus,
   FileExtractionProgress,
+  ManualPositionDraft,
+  ManualPositionForm,
   SubmittedJd,
 } from "@/features/jd-upload/types";
 
@@ -173,6 +175,11 @@ interface ExtractionViewProps {
   onRetryFile?: (fileId: string) => void;
   onBack: () => void;
   onContinue: () => void;
+  /** Manually-added labor categories (not present in any uploaded JD). */
+  manualDrafts?: ManualPositionDraft[];
+  onSaveManual?: (draftId: string | null, form: ManualPositionForm, sourceFileId: string) => void;
+  onDeleteManual?: (draftId: string) => void;
+  committing?: boolean;
 }
 
 function SkeletonLine({ width = "w-48" }: { width?: string }): React.ReactElement {
@@ -209,6 +216,10 @@ export function ExtractionView({
   onRetryFile,
   onBack,
   onContinue,
+  manualDrafts,
+  onSaveManual,
+  onDeleteManual,
+  committing,
 }: ExtractionViewProps): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string>(submittedJds[0]?.fileId ?? "");
 
@@ -255,6 +266,10 @@ export function ExtractionView({
             onRetryFile={onRetryFile}
             onBack={onBack}
             onContinue={onContinue}
+            manualDrafts={manualDrafts}
+            onSaveManual={onSaveManual}
+            onDeleteManual={onDeleteManual}
+            committing={committing}
           />
         ) : (
         <div className="flex min-h-0 flex-1 gap-6">

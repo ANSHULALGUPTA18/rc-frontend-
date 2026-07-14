@@ -6,7 +6,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
 import { RecommendationCard } from "@/features/jd-upload/components/RecommendationCard";
 import { runPool } from "@/features/jd-upload/lib/workerPool";
-import { getPricingHistory, priceJd } from "@/features/jd-upload/api/client";
+import {
+  exportPricingExcel,
+  getPricingHistory,
+  priceJd,
+  type PricingExportRow,
+} from "@/features/jd-upload/api/client";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import type {
   PricingStatus,
@@ -128,6 +133,55 @@ export function RecommendationsView({
   const settled = doneCount + failedCount;
   const allSettled = total > 0 && settled === total;
 
+  // ── Excel export ────────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
+
+  const buildExportRows = (): PricingExportRow[] =>
+    submittedJds.flatMap((jd) => {
+      const rec = pricing[jd.jdId]?.rec;
+      if (!rec) return []; // only priced positions
+      const f = jd.extractedFields;
+      const num = (v: string): number | null => {
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? n : null;
+      };
+      return [
+        {
+          position: f.jobTitle ?? jd.fileName,
+          sourcePdf: jd.sourceFileName ?? jd.fileName,
+          location: f.location,
+          sector: f.sector,
+          experience: f.experienceRequired,
+          skills: f.skills.length > 0 ? f.skills.join(", ") : null,
+          payRateLow: num(rec.payRateLow),
+          payRateHigh: num(rec.payRateHigh),
+          billRateLow: num(rec.billRateLow),
+          billRateHigh: num(rec.billRateHigh),
+          markupPct: num(rec.markupPct),
+          confidence: rec.confidenceScore,
+          prompt: rec.promptName,
+          rationale: rec.explanation,
+          status: rec.submissionStatus,
+          pricedOn: rec.createdAt ? rec.createdAt.slice(0, 10) : null,
+        },
+      ];
+    });
+
+  const handleExport = async (): Promise<void> => {
+    const rows = buildExportRows();
+    if (rows.length === 0) return;
+    setExporting(true);
+    setExportError(false);
+    try {
+      await exportPricingExcel(rows, msal);
+    } catch {
+      setExportError(true);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <AppShell>
       <header className="space-y-6">
@@ -205,10 +259,39 @@ export function RecommendationsView({
         ) : (
           <span />
         )}
-        <Button size="lg" className="w-auto" onClick={onDone}>
-          Done — Go to Dashboard
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-auto"
+            disabled={exporting || doneCount === 0}
+            onClick={() => void handleExport()}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="h-4 w-4"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            {exporting ? "Exporting…" : "Export to Excel"}
+          </Button>
+          <Button size="lg" className="w-auto" onClick={onDone}>
+            Done — Go to Dashboard
+          </Button>
+        </div>
       </div>
+
+      {exportError && (
+        <p className="mt-2 text-right text-xs text-red-600">
+          Export failed. Please try again.
+        </p>
+      )}
     </AppShell>
   );
 }

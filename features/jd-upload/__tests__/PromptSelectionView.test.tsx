@@ -75,8 +75,9 @@ describe("PromptSelectionView — Apply prompt to all", () => {
     const select = await screen.findByRole("combobox");
     await userEvent.selectOptions(select, "2");
 
-    // Propagate to all, then continue.
+    // Open the confirmation dialog, then confirm.
     await userEvent.click(screen.getByRole("button", { name: "Apply prompt to all" }));
+    await userEvent.click(screen.getByRole("button", { name: "Apply to all" }));
     await userEvent.click(
       screen.getByRole("button", { name: /Continue to Recommendations/ }),
     );
@@ -111,5 +112,32 @@ describe("PromptSelectionView — Apply prompt to all", () => {
 
     expect(configs["a"].promptName).toBe("analysis_v2"); // edited one
     expect(configs["b"].promptName).toBe("Prompt_1"); // untouched default
+  });
+
+  it("shows a confirmation dialog and cancelling does NOT apply", async () => {
+    const onContinue = vi.fn();
+    renderView(onContinue);
+
+    const select = await screen.findByRole("combobox");
+    await userEvent.selectOptions(select, "2");
+
+    // Open dialog → confirmation text appears
+    await userEvent.click(screen.getByRole("button", { name: "Apply prompt to all" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/applied to every position in the queue/i)).toBeInTheDocument();
+
+    // Cancel → dialog closes, nothing applied
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Continue to Recommendations/ }),
+    );
+    await waitFor(() => expect(onContinue).toHaveBeenCalledTimes(1));
+    const configs = onContinue.mock.calls[0][0] as Record<string, { promptName: string | null }>;
+
+    // Cancel meant "b" keeps its default (not copied)
+    expect(configs["a"].promptName).toBe("analysis_v2");
+    expect(configs["b"].promptName).toBe("Prompt_1");
   });
 });

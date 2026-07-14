@@ -4,7 +4,14 @@ import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { PositionDetailModal } from "@/features/jd-upload/components/PositionDetailModal";
-import type { FileExtractionProgress, SubmittedJd } from "@/features/jd-upload/types";
+import { AddLaborCategoryModal } from "@/features/jd-upload/components/AddLaborCategoryModal";
+import { deriveContextDefaults } from "@/features/jd-upload/lib/manualPosition";
+import type {
+  FileExtractionProgress,
+  ManualPositionDraft,
+  ManualPositionForm,
+  SubmittedJd,
+} from "@/features/jd-upload/types";
 
 interface ExtractionResultsProps {
   submittedJds: SubmittedJd[];
@@ -12,6 +19,13 @@ interface ExtractionResultsProps {
   onRetryFile?: (fileId: string) => void;
   onBack: () => void;
   onContinue: () => void;
+  /** Manually-added labor categories, each attached to a source PDF. */
+  manualDrafts?: ManualPositionDraft[];
+  /** Save a manual position under a PDF — draftId null creates, else updates. */
+  onSaveManual?: (draftId: string | null, form: ManualPositionForm, sourceFileId: string) => void;
+  onDeleteManual?: (draftId: string) => void;
+  /** True while manual positions are being committed on Continue. */
+  committing?: boolean;
 }
 
 function stripExtension(name: string): string {
@@ -77,9 +91,9 @@ function ChevronIcon({ open }: { open: boolean }): React.ReactElement {
   );
 }
 
-/** Positions belonging to one source PDF. */
+/** Extracted (non-manual) positions belonging to one source PDF. */
 function positionsForFile(jds: SubmittedJd[], fileId: string): SubmittedJd[] {
-  return jds.filter((jd) => (jd.sourceFileId ?? jd.fileId) === fileId);
+  return jds.filter((jd) => !jd.isManual && (jd.sourceFileId ?? jd.fileId) === fileId);
 }
 
 function pdfType(positions: SubmittedJd[]): string {
@@ -130,10 +144,30 @@ export function ExtractionResults({
   onRetryFile,
   onBack,
   onContinue,
+  manualDrafts = [],
+  onSaveManual,
+  onDeleteManual,
+  committing = false,
 }: ExtractionResultsProps): React.ReactElement {
   const [tab, setTab] = useState<"by-pdf" | "all">("by-pdf");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [detailJd, setDetailJd] = useState<SubmittedJd | null>(null);
+  // Manual labor-category modal — carries the PDF it's attached to.
+  // null = closed; draftId null = add new under sourceFileId.
+  const [manualModal, setManualModal] =
+    useState<{ sourceFileId: string; draftId: string | null } | null>(null);
+
+  const editingDraft =
+    manualModal?.draftId != null
+      ? manualDrafts.find((d) => d.draftId === manualModal.draftId)
+      : undefined;
+  const manualEnabled = Boolean(onSaveManual);
+
+  // Manual drafts + inherited context for a given PDF.
+  const draftsForFile = (fileId: string): ManualPositionDraft[] =>
+    manualDrafts.filter((d) => d.sourceFileId === fileId);
+  const contextForFile = (fileId: string): { location: string | null; sector: string | null } =>
+    deriveContextDefaults(positionsForFile(submittedJds, fileId));
 
   const toggle = (fileId: string): void =>
     setExpanded((prev) => {
@@ -143,7 +177,10 @@ export function ExtractionResults({
       return next;
     });
 
-  const totalPositions = submittedJds.length;
+  // Committed manual positions live in the "Additional Labor Categories"
+  // section below, not the PDF-derived tabs.
+  const extractedJds = submittedJds.filter((jd) => !jd.isManual);
+  const totalPositions = extractedJds.length;
 
   return (
     <div className="flex flex-1 flex-col gap-4 min-h-0">
@@ -259,6 +296,72 @@ export function ExtractionResults({
                       </div>
                     </div>
                   )}
+
+                  {/* Per-PDF manual labor categories — inherit THIS PDF's context */}
+                  {manualEnabled && !failed && (() => {
+                    const pdfDrafts = draftsForFile(pdf.fileId);
+                    return (
+                      <div className="border-t border-dashed border-line bg-surface-subtle/60 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                            Additional Labor Categories
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setManualModal({ sourceFileId: pdf.fileId, draftId: null })}
+                            className="shrink-0 rounded-lg border border-sidebar-active/40 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
+                          >
+                            + Add Labor Category
+                          </button>
+                        </div>
+
+                        {pdfDrafts.length > 0 && (
+                          <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {pdfDrafts.map((d) => {
+                              const meta = [d.form.location || contextForFile(pdf.fileId).location, d.form.experience]
+                                .filter(Boolean)
+                                .join(" · ");
+                              return (
+                                <li
+                                  key={d.draftId}
+                                  className="flex items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5"
+                                >
+                                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate text-sm font-medium text-ink">
+                                        {d.form.laborCategory}
+                                      </span>
+                                      <span className="shrink-0 rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-700 ring-1 ring-purple-200">
+                                        Manual
+                                      </span>
+                                    </div>
+                                    {meta && <span className="block truncate text-xs text-ink-subtle">{meta}</span>}
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setManualModal({ sourceFileId: pdf.fileId, draftId: d.draftId })}
+                                      className="rounded-md px-2 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-50"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onDeleteManual?.(d.draftId)}
+                                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -266,7 +369,7 @@ export function ExtractionResults({
         ) : (
           // All Positions — flat list across every PDF
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {submittedJds.map((jd) => (
+            {extractedJds.map((jd) => (
               <PositionRow key={jd.fileId} jd={jd} onSelect={setDetailJd} />
             ))}
           </div>
@@ -275,16 +378,31 @@ export function ExtractionResults({
 
       {/* Actions */}
       <div className="shrink-0 flex items-center justify-between">
-        <Button variant="secondary" size="md" className="w-auto" onClick={onBack}>
+        <Button variant="secondary" size="md" className="w-auto" onClick={onBack} disabled={committing}>
           ← Back
         </Button>
-        <Button size="lg" className="w-auto" onClick={onContinue}>
-          Continue to Prompt Selection →
+        <Button size="lg" className="w-auto" onClick={onContinue} disabled={committing}>
+          {committing ? "Adding labor categories…" : "Continue to Prompt Selection →"}
         </Button>
       </div>
 
       {/* Per-position extracted-fields detail */}
       <PositionDetailModal jd={detailJd} onClose={() => setDetailJd(null)} />
+
+      {/* Add / edit a manual labor category (scoped to one PDF) */}
+      <AddLaborCategoryModal
+        open={manualModal !== null}
+        editing={Boolean(editingDraft)}
+        initialForm={editingDraft?.form}
+        inheritedContext={manualModal ? contextForFile(manualModal.sourceFileId) : undefined}
+        onCancel={() => setManualModal(null)}
+        onSave={(form) => {
+          if (manualModal) {
+            onSaveManual?.(manualModal.draftId, form, manualModal.sourceFileId);
+          }
+          setManualModal(null);
+        }}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { WorkshopStages } from "@/features/jd-upload/components/WorkshopStages";
 import { WorkshopSidebar } from "@/features/jd-upload/components/WorkshopSidebar";
+import { ConfirmDialog } from "@/features/jd-upload/components/ConfirmDialog";
 import { TopBar } from "@/components/layout/TopBar";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
@@ -24,6 +25,8 @@ interface FileConfig {
   promptMode: PromptMode;
   promptTemplateId: string;
   customContent: string;
+  /** Edited template text (default mode). null = use the template as-is. */
+  templateOverride: string | null;
   location: string;
   sector: string;
   previewEditing: boolean;
@@ -33,6 +36,7 @@ const defaultConfig = (): FileConfig => ({
   promptMode: "default",
   promptTemplateId: "1",
   customContent: "",
+  templateOverride: null,
   location: "",
   sector: "",
   previewEditing: false,
@@ -126,6 +130,9 @@ export function PromptSelectionView({
 
   const [selectedId, setSelectedId] = useState<string>(queueItems[0]?.id ?? "");
 
+  // Which "apply to all" confirmation is pending (null = closed).
+  const [confirmApply, setConfirmApply] = useState<"prompt" | "location-sector" | null>(null);
+
   const [configs, setConfigs] = useState<Record<string, FileConfig>>(() =>
     Object.fromEntries(
       queueItems.map((item) => {
@@ -180,6 +187,7 @@ export function PromptSelectionView({
           promptMode: source.promptMode,
           promptTemplateId: source.promptTemplateId,
           customContent: source.customContent,
+          templateOverride: source.templateOverride,
         };
       }
       return next;
@@ -193,7 +201,9 @@ export function PromptSelectionView({
   ) ?? promptOptions[0];
 
   const previewContent =
-    cfg?.promptMode === "custom" ? cfg.customContent : activeTpl.content;
+    cfg?.promptMode === "custom"
+      ? cfg.customContent
+      : (cfg?.templateOverride ?? activeTpl.content);
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-subtle">
@@ -309,7 +319,7 @@ export function PromptSelectionView({
                     </span>
                     <button
                       type="button"
-                      onClick={applyPromptToAll}
+                      onClick={() => setConfirmApply("prompt")}
                       className="shrink-0 rounded-md border border-sidebar-active/40 bg-blue-50 px-3 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
                     >
                       Apply prompt to all
@@ -332,6 +342,7 @@ export function PromptSelectionView({
                           onChange={(e) =>
                             patchConfig(selectedItem.id, {
                               promptTemplateId: e.target.value,
+                              templateOverride: null,
                               previewEditing: false,
                             })
                           }
@@ -369,6 +380,9 @@ export function PromptSelectionView({
                       <textarea
                         readOnly={!cfg.previewEditing}
                         value={previewContent}
+                        onChange={(e) =>
+                          patchConfig(selectedItem.id, { templateOverride: e.target.value })
+                        }
                         rows={4}
                         className={cn(
                           "w-full resize-none rounded-lg border px-3 py-2 text-sm text-ink focus:outline-none",
@@ -413,7 +427,7 @@ export function PromptSelectionView({
                       <span className="text-sm font-medium text-ink">Location &amp; Sector</span>
                       <button
                         type="button"
-                        onClick={applyLocationSectorToAll}
+                        onClick={() => setConfirmApply("location-sector")}
                         disabled={!cfg.location.trim() && !cfg.sector.trim()}
                         className="rounded-md border border-sidebar-active/40 bg-blue-50 px-3 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
                       >
@@ -490,10 +504,16 @@ export function PromptSelectionView({
                     for (const item of queueItems) {
                       const c = configs[item.id] ?? defaultConfig();
                       const tpl = promptOptions.find((t) => t.id === c.promptTemplateId) ?? promptOptions[0];
+                      const defaultContent = c.templateOverride ?? tpl?.content ?? "";
                       resolved[item.id] = {
                         promptTemplateId: c.promptMode === "default" ? c.promptTemplateId : null,
-                        promptContent: c.promptMode === "custom" ? c.customContent : (tpl?.content ?? ""),
-                        promptName: c.promptMode === "custom" ? "Custom Prompt" : (tpl?.name ?? null),
+                        promptContent: c.promptMode === "custom" ? c.customContent : defaultContent,
+                        promptName:
+                          c.promptMode === "custom"
+                            ? "Custom Prompt"
+                            : c.templateOverride != null
+                              ? `${tpl?.name ?? "Template"} (edited)`
+                              : (tpl?.name ?? null),
                         locationOverride: c.location.trim() || null,
                         sectorOverride: c.sector.trim() || null,
                       };
@@ -508,6 +528,28 @@ export function PromptSelectionView({
           ) : null}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmApply !== null}
+        title={
+          confirmApply === "prompt"
+            ? "Apply prompt to all positions?"
+            : "Apply location & sector to all positions?"
+        }
+        message={
+          confirmApply === "prompt"
+            ? "The prompt configuration currently selected will be applied to every position in the queue. This will overwrite any prompt settings already configured for the other positions. Do you want to continue?"
+            : "The location and sector entered for this position will be applied to every position in the queue. This will overwrite the location and sector already set for the other positions. Do you want to continue?"
+        }
+        confirmLabel="Apply to all"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (confirmApply === "prompt") applyPromptToAll();
+          else if (confirmApply === "location-sector") applyLocationSectorToAll();
+          setConfirmApply(null);
+        }}
+        onCancel={() => setConfirmApply(null)}
+      />
     </div>
   );
 }

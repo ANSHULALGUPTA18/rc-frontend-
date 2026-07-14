@@ -29,6 +29,7 @@ vi.mock("@/features/jd-upload/api/client", () => ({
   priceJd: vi.fn(),
   getPricingHistory: vi.fn(),
   submitForApproval: vi.fn(),
+  exportPricingExcel: vi.fn(),
 }));
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -189,5 +190,44 @@ describe("RecommendationsView — pooled pricing", () => {
 
     await waitFor(() => expect(screen.getByText(/3 of 3 priced/)).toBeInTheDocument());
     expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("exports priced rows to Excel", async () => {
+    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+    vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
+    vi.mocked(client.exportPricingExcel).mockResolvedValue(undefined);
+
+    const jds = makeJds(2);
+    render(
+      <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
+    );
+
+    // Button enables once at least one JD is priced.
+    const exportBtn = await screen.findByRole("button", { name: /Export to Excel/ });
+    await waitFor(() => expect(exportBtn).not.toBeDisabled());
+
+    await userEvent.click(exportBtn);
+
+    await waitFor(() => expect(client.exportPricingExcel).toHaveBeenCalledTimes(1));
+    const rows = vi.mocked(client.exportPricingExcel).mock.calls[0][0];
+    expect(rows).toHaveLength(2); // both priced positions exported
+    expect(rows[0]).toMatchObject({
+      payRateLow: 55,
+      payRateHigh: 65,
+      confidence: 0.87,
+      status: "draft",
+    });
+  });
+
+  it("disables Export until at least one JD is priced", async () => {
+    // Pricing hangs (never resolves) so nothing is done yet.
+    vi.mocked(client.priceJd).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(client.getPricingHistory).mockImplementation(() => new Promise(() => {}));
+
+    const jds = makeJds(1);
+    render(
+      <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
+    );
+    expect(screen.getByRole("button", { name: /Export to Excel/ })).toBeDisabled();
   });
 });

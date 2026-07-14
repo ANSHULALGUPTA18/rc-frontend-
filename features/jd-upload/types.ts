@@ -39,6 +39,35 @@ export interface SubmittedJd {
   sourceFileName?: string;
   /** How this position was detected — used to label the PDF as Text vs Scanned. */
   detectionSource?: DetectedPosition["detectionSource"];
+  /** True when this position was entered by hand (not found in any uploaded JD). */
+  isManual?: boolean;
+}
+
+/**
+ * A manually-entered labor category requested by the client but absent from the
+ * uploaded JD. Held client-side (with a temp id) until the recruiter continues
+ * to Prompt Selection, at which point it is committed via confirm-positions and
+ * becomes a regular SubmittedJd (source = "manual").
+ */
+export interface ManualPositionForm {
+  /** Labor Category — the only required field. Maps to the position title. */
+  laborCategory: string;
+  location: string;
+  experience: string;
+  education: string;
+  /** Free text; comma- or newline-separated. Parsed into a skills array. */
+  skills: string;
+  responsibilities: string;
+  employmentType: string;
+  notes: string;
+}
+
+export interface ManualPositionDraft {
+  draftId: string;
+  /** The source PDF this labor category is attached to — it inherits ONLY that
+   *  PDF's client/contract context and is grouped under that PDF downstream. */
+  sourceFileId: string;
+  form: ManualPositionForm;
 }
 
 /**
@@ -123,7 +152,7 @@ export interface ConfirmPositionItem {
   mandatorySkills: string[];
   experienceLevel: string | null;
   employmentType: string | null;
-  detectionSource: "gemini" | "heading_split" | "vision";
+  detectionSource: "gemini" | "heading_split" | "vision" | "manual";
 }
 
 // ─── Batch pricing progress ─────────────────────────────────────────────────────

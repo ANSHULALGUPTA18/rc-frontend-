@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Multi-stage build for Next.js 15 (standalone output).
 # NEXT_PUBLIC_* are compiled into the bundle at build time, so they are passed
 # as build args per environment. Defaults below = mock mode (no backend needed).
@@ -7,7 +6,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npm ci
 
 # ---- builder ----
 FROM node:20-alpine AS builder
@@ -28,7 +27,7 @@ ENV NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK \
     NEXT_PUBLIC_AZURE_REDIRECT_URI=$NEXT_PUBLIC_AZURE_REDIRECT_URI \
     NEXT_PUBLIC_AZURE_API_SCOPE=$NEXT_PUBLIC_AZURE_API_SCOPE
 
-RUN --mount=type=cache,target=/app/.next/cache npm run build
+RUN npm run build
 
 # ---- runner ----
 FROM node:20-alpine AS runner
