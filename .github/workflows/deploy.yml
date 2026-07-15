@@ -57,14 +57,14 @@ jobs:
         id: vars
         run: |
           # GitHub Environment is development/staging/production; the Azure container
-          # apps stay ca-rcp-frontend-{dev,staging,prod}, so map the full name -> short code.
+          # apps stay rc-frontend-{dev,staging,prod}, so map the full name -> short code.
           ENV="${{ github.event_name == 'push' && 'dev' || (inputs.environment == 'production' && 'prod' || inputs.environment) }}"
           # Full GitHub Environment name (development/staging/production) for downstream
           # environment bindings + Teams display; ENV stays the Azure short code.
           FULL_ENV="${{ github.event_name == 'push' && 'development' || inputs.environment }}"
           SHA="${GITHUB_SHA::8}"
           ACR="${{ secrets.ACR_LOGIN_SERVER }}"
-          APP="ca-rcp-frontend-$ENV"
+          APP="rc-frontend-$ENV"
           echo "deploy_env=$FULL_ENV"                     >> "$GITHUB_OUTPUT"
           echo "app=$APP"                                 >> "$GITHUB_OUTPUT"
           echo "DEPLOY_ENV=$FULL_ENV"                     >> "$GITHUB_ENV"

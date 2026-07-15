@@ -23,7 +23,8 @@ export const MOCK_TEMPLATES: PromptTemplate[] = [
   {
     id: "1",
     name: "prompt_1",
-    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam eu turpis moac mi nisl, eu tempor urna. Curabitur vel bibendum lorem. Morbi convallis convallis diam sit amet lacinia. Aliquam in elementum.",
+    content:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam eu turpis moac mi nisl, eu tempor urna. Curabitur vel bibendum lorem. Morbi convallis convallis diam sit amet lacinia. Aliquam in elementum.",
     isDefault: true,
     usedInCampaigns: 14,
     editedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
@@ -31,7 +32,8 @@ export const MOCK_TEMPLATES: PromptTemplate[] = [
   {
     id: "2",
     name: "analysis_v2",
-    content: "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD. Flag any inconsistencies in year-over-year pricing.",
+    content:
+      "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD. Flag any inconsistencies in year-over-year pricing.",
     isDefault: false,
     usedInCampaigns: 8,
     editedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
@@ -39,7 +41,8 @@ export const MOCK_TEMPLATES: PromptTemplate[] = [
   {
     id: "3",
     name: "extraction_v3",
-    content: "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD. Flag any inconsistencies in year-over-year pricing.",
+    content:
+      "Analyse the provided pricing documents and extract the line item costs, volume discounts, and service level agreements. Ensure all currency values are normalized to USD. Flag any inconsistencies in year-over-year pricing.",
     isDefault: false,
     usedInCampaigns: 8,
     editedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
@@ -53,23 +56,38 @@ export async function getPromptTemplates(): Promise<PromptTemplate[]> {
     const { getPrompts } = await import("@/lib/prompts/prompt-store");
     const stored = getPrompts();
     return stored.map((p) => ({
-      id: p.id, name: p.name, content: p.content,
-      isDefault: false, usedInCampaigns: 0, editedAt: new Date(),
+      id: p.id,
+      name: p.name,
+      content: p.content,
+      isDefault: false,
+      usedInCampaigns: 0,
+      editedAt: new Date(),
     }));
   }
   return MOCK_TEMPLATES;
 }
 
-export async function createPromptTemplate(
-  name: string,
-  content: string,
-): Promise<PromptTemplate> {
+export async function createPromptTemplate(name: string, content: string): Promise<PromptTemplate> {
   if (typeof window !== "undefined") {
     const { addPrompt } = await import("@/lib/prompts/prompt-store");
     const p = addPrompt(name, content);
-    return { id: p.id, name: p.name, content: p.content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
+    return {
+      id: p.id,
+      name: p.name,
+      content: p.content,
+      isDefault: false,
+      usedInCampaigns: 0,
+      editedAt: new Date(),
+    };
   }
-  return { id: crypto.randomUUID(), name, content, isDefault: false, usedInCampaigns: 0, editedAt: new Date() };
+  return {
+    id: crypto.randomUUID(),
+    name,
+    content,
+    isDefault: false,
+    usedInCampaigns: 0,
+    editedAt: new Date(),
+  };
 }
 
 export async function deletePromptTemplate(id: string): Promise<void> {

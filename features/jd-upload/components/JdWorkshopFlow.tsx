@@ -40,12 +40,7 @@ import type {
 /** Max PDFs processed concurrently during batch extraction (sliding window). */
 const MAX_CONCURRENT_EXTRACTIONS = 5;
 
-type Stage =
-  | "upload"
-  | "submitting"
-  | "extraction"
-  | "prompt-selection"
-  | "recommendations";
+type Stage = "upload" | "submitting" | "extraction" | "prompt-selection" | "recommendations";
 
 export function JdWorkshopFlow(): React.ReactElement {
   const router = useRouter();
@@ -69,13 +64,10 @@ export function JdWorkshopFlow(): React.ReactElement {
   const [fileProgress, setFileProgress] = useState<FileExtractionProgress[]>([]);
 
   const _patchProgress = (fileId: string, patch: Partial<FileExtractionProgress>): void =>
-    setFileProgress((prev) =>
-      prev.map((p) => (p.fileId === fileId ? { ...p, ...patch } : p)),
-    );
+    setFileProgress((prev) => prev.map((p) => (p.fileId === fileId ? { ...p, ...patch } : p)));
 
   const _errMsg = (e: unknown): string =>
     e instanceof Error && e.message ? e.message : "Extraction failed.";
-
 
   // ── Upload → unified pooled extraction (every file, text or scanned) ────────
 
@@ -124,7 +116,7 @@ export function JdWorkshopFlow(): React.ReactElement {
       return {
         fileId: crypto.randomUUID(),
         fileName: multiPosition
-          ? r.extractedFields.jobTitle ?? item?.title ?? entry.file.name
+          ? (r.extractedFields.jobTitle ?? item?.title ?? entry.file.name)
           : entry.file.name,
         jdId: r.jdId,
         extractedFields: r.extractedFields,

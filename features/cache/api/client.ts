@@ -35,10 +35,9 @@ function mapStat(s: RawStat): CacheStat {
 }
 
 export async function getCacheStats(msal?: MsalTokenContext): Promise<CacheStats> {
-  const res = await apiFetch<{ extraction: RawStat; pricing: RawStat }>(
-    "/v1/admin/cache/stats",
-    { msal },
-  );
+  const res = await apiFetch<{ extraction: RawStat; pricing: RawStat }>("/v1/admin/cache/stats", {
+    msal,
+  });
   return { extraction: mapStat(res.extraction), pricing: mapStat(res.pricing) };
 }
 

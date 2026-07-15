@@ -32,7 +32,8 @@ export function DatabaseView(): React.ReactElement {
 
   // Default to the first table with data once tables load.
   const tables = tablesQuery.data ?? [];
-  const activeTable = selected ?? tables.find((t) => t.rowCount > 0)?.table ?? tables[0]?.table ?? null;
+  const activeTable =
+    selected ?? tables.find((t) => t.rowCount > 0)?.table ?? tables[0]?.table ?? null;
 
   const browseQuery = useQuery({
     queryKey: ["db-browse", activeTable, page, search],
@@ -124,7 +125,8 @@ export function DatabaseView(): React.ReactElement {
                   <h2 className="truncate font-mono text-lg font-bold text-ink">{activeTable}</h2>
                   {result && (
                     <p className="text-xs text-ink-muted">
-                      {result.total} row{result.total === 1 ? "" : "s"} · {result.columns.length} columns
+                      {result.total} row{result.total === 1 ? "" : "s"} · {result.columns.length}{" "}
+                      columns
                     </p>
                   )}
                 </div>
@@ -166,7 +168,10 @@ export function DatabaseView(): React.ReactElement {
                     </thead>
                     <tbody>
                       {result.rows.map((row, i) => (
-                        <tr key={i} className="border-b border-line last:border-0 hover:bg-surface-subtle">
+                        <tr
+                          key={i}
+                          className="border-b border-line last:border-0 hover:bg-surface-subtle"
+                        >
                           {result.columns.map((col) => {
                             const text = formatCell(row[col]);
                             return (

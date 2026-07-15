@@ -14,11 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ExtractionResults } from "@/features/jd-upload/components/ExtractionResults";
 import type { FileExtractionProgress, SubmittedJd } from "@/features/jd-upload/types";
 
-const jd = (
-  fileId: string,
-  sourceFileId: string,
-  jobTitle: string,
-): SubmittedJd => ({
+const jd = (fileId: string, sourceFileId: string, jobTitle: string): SubmittedJd => ({
   fileId,
   fileName: jobTitle,
   jdId: `jd-${fileId}`,

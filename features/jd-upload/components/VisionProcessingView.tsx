@@ -131,10 +131,7 @@ export function VisionProcessingView({
               <div className="mt-6 rounded-lg border border-line bg-surface-subtle px-4 py-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-ink-muted">File</span>
-                  <span
-                    className="max-w-[220px] truncate font-medium text-ink"
-                    title={filename}
-                  >
+                  <span className="max-w-[220px] truncate font-medium text-ink" title={filename}>
                     {filename}
                   </span>
                 </div>

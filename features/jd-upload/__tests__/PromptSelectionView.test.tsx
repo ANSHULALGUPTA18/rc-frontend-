@@ -62,9 +62,7 @@ function renderView(onContinue: (c: Record<string, unknown>) => void) {
 describe("PromptSelectionView — Apply prompt to all", () => {
   it("shows the button only when there is more than one JD", async () => {
     renderView(() => {});
-    expect(
-      await screen.findByRole("button", { name: "Apply prompt to all" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Apply prompt to all" })).toBeInTheDocument();
   });
 
   it("copies the selected item's template to all items", async () => {
@@ -78,9 +76,7 @@ describe("PromptSelectionView — Apply prompt to all", () => {
     // Open the confirmation dialog, then confirm.
     await userEvent.click(screen.getByRole("button", { name: "Apply prompt to all" }));
     await userEvent.click(screen.getByRole("button", { name: "Apply to all" }));
-    await userEvent.click(
-      screen.getByRole("button", { name: /Continue to Recommendations/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Continue to Recommendations/ }));
 
     await waitFor(() => expect(onContinue).toHaveBeenCalledTimes(1));
     const configs = onContinue.mock.calls[0][0] as Record<
@@ -103,9 +99,7 @@ describe("PromptSelectionView — Apply prompt to all", () => {
     await userEvent.selectOptions(select, "2");
 
     // Continue WITHOUT applying to all
-    await userEvent.click(
-      screen.getByRole("button", { name: /Continue to Recommendations/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Continue to Recommendations/ }));
 
     await waitFor(() => expect(onContinue).toHaveBeenCalledTimes(1));
     const configs = onContinue.mock.calls[0][0] as Record<string, { promptName: string | null }>;
@@ -130,9 +124,7 @@ describe("PromptSelectionView — Apply prompt to all", () => {
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Continue to Recommendations/ }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: /Continue to Recommendations/ }));
     await waitFor(() => expect(onContinue).toHaveBeenCalledTimes(1));
     const configs = onContinue.mock.calls[0][0] as Record<string, { promptName: string | null }>;
 

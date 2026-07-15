@@ -14,9 +14,22 @@ import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
 import type { ResolvedPromptConfig, SubmittedJd } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
-  { id: "1", name: "Public Sector Rate", content: "Please provide the public sector hourly pay rate of this position." },
-  { id: "2", name: "Market Rate Analysis", content: "Analyse the market rate for this role based on skills, experience, location, and industry sector." },
-  { id: "3", name: "Compensation Extraction", content: "Extract all role-specific compensation data for this position." },
+  {
+    id: "1",
+    name: "Public Sector Rate",
+    content: "Please provide the public sector hourly pay rate of this position.",
+  },
+  {
+    id: "2",
+    name: "Market Rate Analysis",
+    content:
+      "Analyse the market rate for this role based on skills, experience, location, and industry sector.",
+  },
+  {
+    id: "3",
+    name: "Compensation Extraction",
+    content: "Extract all role-specific compensation data for this position.",
+  },
 ];
 
 type PromptMode = "default" | "custom";
@@ -108,8 +121,8 @@ interface PromptSelectionViewProps {
 
 /** A queue item is either a single file or one of N extracted positions. */
 interface QueueItem {
-  id: string;       // fileId used as config key
-  label: string;    // display name
+  id: string; // fileId used as config key
+  label: string; // display name
 }
 
 export function PromptSelectionView({
@@ -196,14 +209,10 @@ export function PromptSelectionView({
 
   const selectedItem = queueItems.find((q) => q.id === selectedId) ?? queueItems[0];
   const cfg = selectedItem ? (configs[selectedItem.id] ?? defaultConfig()) : null;
-  const activeTpl = promptOptions.find(
-    (t) => t.id === cfg?.promptTemplateId,
-  ) ?? promptOptions[0];
+  const activeTpl = promptOptions.find((t) => t.id === cfg?.promptTemplateId) ?? promptOptions[0];
 
   const previewContent =
-    cfg?.promptMode === "custom"
-      ? cfg.customContent
-      : (cfg?.templateOverride ?? activeTpl.content);
+    cfg?.promptMode === "custom" ? cfg.customContent : (cfg?.templateOverride ?? activeTpl.content);
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-subtle">
@@ -261,7 +270,9 @@ export function PromptSelectionView({
                             {item.label}
                           </span>
                           {incomplete && (
-                            <span className="mt-0.5 block text-xs text-red-500">Missing fields</span>
+                            <span className="mt-0.5 block text-xs text-red-500">
+                              Missing fields
+                            </span>
                           )}
                         </span>
                       </span>
@@ -281,24 +292,18 @@ export function PromptSelectionView({
           {/* Config panel */}
           {selectedItem && cfg ? (
             <div className="flex flex-1 flex-col gap-4 min-h-0">
-              <h2 className="text-2xl font-bold text-sidebar">
-                {selectedItem.label}
-              </h2>
+              <h2 className="text-2xl font-bold text-sidebar">{selectedItem.label}</h2>
 
               <div className="flex-1 min-h-0 overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-card">
                 {/* Header row */}
                 <div className="mb-5 flex items-center justify-between gap-4">
-                  <span className="text-sm font-semibold text-ink">
-                    AI Analysis Instructions
-                  </span>
+                  <span className="text-sm font-semibold text-ink">AI Analysis Instructions</span>
                   <div className="flex rounded-lg border border-line p-0.5">
                     {(["default", "custom"] as PromptMode[]).map((mode) => (
                       <button
                         key={mode}
                         type="button"
-                        onClick={() =>
-                          patchConfig(selectedItem.id, { promptMode: mode })
-                        }
+                        onClick={() => patchConfig(selectedItem.id, { promptMode: mode })}
                         className={cn(
                           "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
                           cfg.promptMode === mode
@@ -333,9 +338,7 @@ export function PromptSelectionView({
                     {promptsLoading && <LoadingSpinner />}
                     {promptsError && <ErrorState message="Failed to load prompt templates." />}
                     <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-ink">
-                        Prompt Template
-                      </label>
+                      <label className="block text-sm font-medium text-ink">Prompt Template</label>
                       <div className="relative">
                         <select
                           value={cfg.promptTemplateId}
@@ -361,9 +364,7 @@ export function PromptSelectionView({
                     {/* Preview */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-ink">
-                          Preview
-                        </label>
+                        <label className="block text-sm font-medium text-ink">Preview</label>
                         <button
                           type="button"
                           onClick={() =>
@@ -392,8 +393,8 @@ export function PromptSelectionView({
                         )}
                       />
                       <p className="text-xs text-ink-subtle">
-                        Helper: Your instructions will override the standard
-                        extraction model for this specific JD.
+                        Helper: Your instructions will override the standard extraction model for
+                        this specific JD.
                       </p>
                     </div>
                   </div>
@@ -414,8 +415,8 @@ export function PromptSelectionView({
                       className="w-full resize-none rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
                     />
                     <p className="text-xs text-ink-subtle">
-                      Helper: Your instructions will override the standard
-                      extraction model for this specific JD.
+                      Helper: Your instructions will override the standard extraction model for this
+                      specific JD.
                     </p>
                   </div>
                 )}
@@ -443,9 +444,7 @@ export function PromptSelectionView({
                       <input
                         type="text"
                         value={cfg.location}
-                        onChange={(e) =>
-                          patchConfig(selectedItem.id, { location: e.target.value })
-                        }
+                        onChange={(e) => patchConfig(selectedItem.id, { location: e.target.value })}
                         placeholder="Enter Location Here"
                         className={cn(
                           "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
@@ -465,9 +464,7 @@ export function PromptSelectionView({
                       <input
                         type="text"
                         value={cfg.sector}
-                        onChange={(e) =>
-                          patchConfig(selectedItem.id, { sector: e.target.value })
-                        }
+                        onChange={(e) => patchConfig(selectedItem.id, { sector: e.target.value })}
                         placeholder="e.g. Healthcare, Finance, Technology"
                         className={cn(
                           "w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:ring-1",
@@ -503,7 +500,8 @@ export function PromptSelectionView({
                     const resolved: Record<string, ResolvedPromptConfig> = {};
                     for (const item of queueItems) {
                       const c = configs[item.id] ?? defaultConfig();
-                      const tpl = promptOptions.find((t) => t.id === c.promptTemplateId) ?? promptOptions[0];
+                      const tpl =
+                        promptOptions.find((t) => t.id === c.promptTemplateId) ?? promptOptions[0];
                       const defaultContent = c.templateOverride ?? tpl?.content ?? "";
                       resolved[item.id] = {
                         promptTemplateId: c.promptMode === "default" ? c.promptTemplateId : null,

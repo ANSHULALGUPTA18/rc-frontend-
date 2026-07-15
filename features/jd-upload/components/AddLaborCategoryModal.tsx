@@ -92,8 +92,8 @@ export function AddLaborCategoryModal({
             {editing ? "Edit Labor Category" : "Add Additional Labor Category"}
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-            Add a labor category requested by the client but not included in the uploaded JD.
-            It will use the same client and contract context from the uploaded document.
+            Add a labor category requested by the client but not included in the uploaded JD. It
+            will use the same client and contract context from the uploaded document.
           </p>
           {contextHint && (
             <p className="mt-2 rounded-md bg-surface-subtle px-2.5 py-1.5 text-xs text-ink-muted">

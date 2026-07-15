@@ -48,7 +48,8 @@ export function buildManualRawText(form: ManualPositionForm): string {
   if (form.education.trim()) parts.push(`Education: ${form.education.trim()}`);
   const skills = parseSkillsInput(form.skills);
   if (skills.length) parts.push(`Skills: ${skills.join(", ")}`);
-  if (form.responsibilities.trim()) parts.push(`Responsibilities:\n${form.responsibilities.trim()}`);
+  if (form.responsibilities.trim())
+    parts.push(`Responsibilities:\n${form.responsibilities.trim()}`);
   if (form.employmentType.trim()) parts.push(`Employment Type: ${form.employmentType.trim()}`);
   if (form.notes.trim()) parts.push(`Additional Notes:\n${form.notes.trim()}`);
   return parts.join("\n");
@@ -64,7 +65,8 @@ export interface ManualContextDefaults {
  * already-extracted positions (first non-empty location/sector wins).
  */
 export function deriveContextDefaults(extracted: SubmittedJd[]): ManualContextDefaults {
-  const location = extracted.find((j) => j.extractedFields.location)?.extractedFields.location ?? null;
+  const location =
+    extracted.find((j) => j.extractedFields.location)?.extractedFields.location ?? null;
   const sector = extracted.find((j) => j.extractedFields.sector)?.extractedFields.sector ?? null;
   return { location, sector };
 }

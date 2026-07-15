@@ -297,21 +297,23 @@ export async function getPricingHistory(
   if (IS_MOCK) {
     return [];
   }
-  const res = await apiFetch<{
-    id: string;
-    version_number: number;
-    prompt_name: string | null;
-    prompt_snapshot: string | null;
-    pay_rate_low: string;
-    pay_rate_high: string;
-    bill_rate_low: string;
-    bill_rate_high: string;
-    markup_pct: string;
-    confidence_score: number;
-    explanation: string | null;
-    submission_status: string;
-    created_at: string;
-  }[]>(`/v1/jds/${jdId}/pricing-history`, { msal });
+  const res = await apiFetch<
+    {
+      id: string;
+      version_number: number;
+      prompt_name: string | null;
+      prompt_snapshot: string | null;
+      pay_rate_low: string;
+      pay_rate_high: string;
+      bill_rate_low: string;
+      bill_rate_high: string;
+      markup_pct: string;
+      confidence_score: number;
+      explanation: string | null;
+      submission_status: string;
+      created_at: string;
+    }[]
+  >(`/v1/jds/${jdId}/pricing-history`, { msal });
 
   return res.map((v) => ({
     id: v.id,
@@ -332,10 +334,7 @@ export async function getPricingHistory(
 
 // ─── Pre-flight detection ─────────────────────────────────────────────────────
 
-export async function preflight(
-  file: File,
-  msal?: MsalTokenContext,
-): Promise<PreflightResult> {
+export async function preflight(file: File, msal?: MsalTokenContext): Promise<PreflightResult> {
   if (IS_MOCK) {
     return {
       filename: file.name,
@@ -462,9 +461,7 @@ export async function smartUpload(
     positions: res.positions.map((p) => {
       const src = p.detection_source;
       const detectionSource: DetectedPosition["detectionSource"] =
-        src === "heading_split" ? "heading_split"
-        : src === "vision" ? "vision"
-        : "gemini";
+        src === "heading_split" ? "heading_split" : src === "vision" ? "vision" : "gemini";
       return {
         tempId: p.temp_id,
         title: p.title,

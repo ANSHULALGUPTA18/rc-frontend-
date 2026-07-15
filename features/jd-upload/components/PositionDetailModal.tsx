@@ -107,9 +107,7 @@ export function PositionDetailModal({
               {title}
             </h2>
             {jd.sourceFileName && (
-              <p className="mt-0.5 truncate text-xs text-ink-muted">
-                From {jd.sourceFileName}
-              </p>
+              <p className="mt-0.5 truncate text-xs text-ink-muted">From {jd.sourceFileName}</p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-3">

@@ -35,7 +35,7 @@ jobs:
         shell: bash
     env:
       # GitHub Environment is development/staging/production; map to the Azure container app short code.
-      APP: ca-rcp-frontend-${{ inputs.environment == 'development' && 'dev' || (inputs.environment == 'production' && 'prod' || inputs.environment) }}
+      APP: rc-frontend-${{ inputs.environment == 'development' && 'dev' || (inputs.environment == 'production' && 'prod' || inputs.environment) }}
       RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
       IMAGE: ${{ secrets.ACR_LOGIN_SERVER }}/rc-pricing-frontend
       ACR_NAME: ${{ secrets.ACR_NAME }}

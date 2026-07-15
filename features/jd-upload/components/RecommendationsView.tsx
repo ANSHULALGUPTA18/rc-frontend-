@@ -288,9 +288,7 @@ export function RecommendationsView({
       </div>
 
       {exportError && (
-        <p className="mt-2 text-right text-xs text-red-600">
-          Export failed. Please try again.
-        </p>
+        <p className="mt-2 text-right text-xs text-red-600">Export failed. Please try again.</p>
       )}
     </AppShell>
   );

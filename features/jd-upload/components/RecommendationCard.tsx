@@ -49,7 +49,9 @@ export function RecommendationCard({
           <div className="flex items-center gap-3 py-4">
             <LoadingSpinner />
             <span className="text-sm text-ink-muted">
-              {status === "pricing" ? "Generating AI pricing recommendation…" : "Queued for pricing…"}
+              {status === "pricing"
+                ? "Generating AI pricing recommendation…"
+                : "Queued for pricing…"}
             </span>
           </div>
         </CardContent>
@@ -67,11 +69,7 @@ export function RecommendationCard({
         <CardContent>
           <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <span>{error ?? "No pricing available."}</span>
-            <button
-              type="button"
-              onClick={onRetry}
-              className="ml-3 font-medium underline"
-            >
+            <button type="button" onClick={onRetry} className="ml-3 font-medium underline">
               Retry
             </button>
           </div>
@@ -89,9 +87,7 @@ export function RecommendationCard({
     <Card>
       <CardHeader>
         <CardTitle className="truncate">{fileName}</CardTitle>
-        {rec.promptName && (
-          <p className="text-xs text-ink-muted">Prompt: {rec.promptName}</p>
-        )}
+        {rec.promptName && <p className="text-xs text-ink-muted">Prompt: {rec.promptName}</p>}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Rate grid */}
@@ -103,13 +99,17 @@ export function RecommendationCard({
             </p>
           </div>
           <div className="rounded-lg border border-line bg-surface-muted p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Bill Rate</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Bill Rate
+            </p>
             <p className="mt-1 text-base font-bold text-ink">
               {fmt(rec.billRateLow)} – {fmt(rec.billRateHigh)}/hr
             </p>
           </div>
           <div className="rounded-lg border border-line bg-surface-muted p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Confidence</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Confidence
+            </p>
             <p className="mt-1 text-base font-bold text-ink">
               {Math.round(rec.confidenceScore * 100)}%
             </p>
@@ -120,7 +120,9 @@ export function RecommendationCard({
         {/* Explanation */}
         {rec.explanation && (
           <div className="rounded-lg border border-line bg-blue-50 p-3">
-            <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">Rationale</h4>
+            <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+              Rationale
+            </h4>
             <p className="text-sm leading-relaxed text-ink-muted">{rec.explanation}</p>
           </div>
         )}
@@ -181,7 +183,10 @@ export function RecommendationCard({
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => { setShowNotes(false); setApprovalNotes(""); }}
+                    onClick={() => {
+                      setShowNotes(false);
+                      setApprovalNotes("");
+                    }}
                   >
                     Cancel
                   </Button>

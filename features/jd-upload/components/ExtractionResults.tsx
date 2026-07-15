@@ -154,8 +154,10 @@ export function ExtractionResults({
   const [detailJd, setDetailJd] = useState<SubmittedJd | null>(null);
   // Manual labor-category modal — carries the PDF it's attached to.
   // null = closed; draftId null = add new under sourceFileId.
-  const [manualModal, setManualModal] =
-    useState<{ sourceFileId: string; draftId: string | null } | null>(null);
+  const [manualModal, setManualModal] = useState<{
+    sourceFileId: string;
+    draftId: string | null;
+  } | null>(null);
 
   const editingDraft =
     manualModal?.draftId != null
@@ -186,10 +188,12 @@ export function ExtractionResults({
     <div className="flex flex-1 flex-col gap-4 min-h-0">
       {/* Tabs */}
       <div className="shrink-0 flex gap-6 border-b border-line">
-        {([
-          ["by-pdf", "By PDF"],
-          ["all", `All Positions (${totalPositions})`],
-        ] as const).map(([id, label]) => (
+        {(
+          [
+            ["by-pdf", "By PDF"],
+            ["all", `All Positions (${totalPositions})`],
+          ] as const
+        ).map(([id, label]) => (
           <button
             key={id}
             type="button"
@@ -236,14 +240,32 @@ export function ExtractionResults({
                         </div>
                         {failed ? (
                           <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-red-600">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                              className="h-4 w-4"
+                            >
                               <path d="M18 6 6 18M6 6l12 12" />
                             </svg>
                             Failed
                           </span>
                         ) : (
                           <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-green-600">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                              className="h-4 w-4"
+                            >
                               <path d="M20 6 9 17l-5-5" />
                             </svg>
                             Completed
@@ -254,30 +276,29 @@ export function ExtractionResults({
                       {/* Row 2: metadata + action */}
                       <div className="mt-2 flex items-center justify-between gap-3">
                         <span className="truncate text-xs text-ink-muted">
-                          Uploaded: {formatUploaded(pdf.uploadedAt)} · Type: {pdfType(positions)} · Size: {formatBytes(pdf.sizeBytes)}
+                          Uploaded: {formatUploaded(pdf.uploadedAt)} · Type: {pdfType(positions)} ·
+                          Size: {formatBytes(pdf.sizeBytes)}
                         </span>
-                        {failed ? (
-                          onRetryFile && (
-                            <button
-                              type="button"
-                              onClick={() => onRetryFile(pdf.fileId)}
-                              className="shrink-0 rounded-lg border border-sidebar-active/40 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
-                            >
-                              Retry
-                            </button>
-                          )
-                        ) : (
-                          positions.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => toggle(pdf.fileId)}
-                              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:border-sidebar-active/40"
-                            >
-                              View Positions
-                              <ChevronIcon open={isOpen} />
-                            </button>
-                          )
-                        )}
+                        {failed
+                          ? onRetryFile && (
+                              <button
+                                type="button"
+                                onClick={() => onRetryFile(pdf.fileId)}
+                                className="shrink-0 rounded-lg border border-sidebar-active/40 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
+                              >
+                                Retry
+                              </button>
+                            )
+                          : positions.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => toggle(pdf.fileId)}
+                                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:border-sidebar-active/40"
+                              >
+                                View Positions
+                                <ChevronIcon open={isOpen} />
+                              </button>
+                            )}
                       </div>
 
                       {failed && pdf.error && (
@@ -298,70 +319,86 @@ export function ExtractionResults({
                   )}
 
                   {/* Per-PDF manual labor categories — inherit THIS PDF's context */}
-                  {manualEnabled && !failed && (() => {
-                    const pdfDrafts = draftsForFile(pdf.fileId);
-                    return (
-                      <div className="border-t border-dashed border-line bg-surface-subtle/60 px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                            Additional Labor Categories
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setManualModal({ sourceFileId: pdf.fileId, draftId: null })}
-                            className="shrink-0 rounded-lg border border-sidebar-active/40 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
-                          >
-                            + Add Labor Category
-                          </button>
-                        </div>
+                  {manualEnabled &&
+                    !failed &&
+                    (() => {
+                      const pdfDrafts = draftsForFile(pdf.fileId);
+                      return (
+                        <div className="border-t border-dashed border-line bg-surface-subtle/60 px-4 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                              Additional Labor Categories
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setManualModal({ sourceFileId: pdf.fileId, draftId: null })
+                              }
+                              className="shrink-0 rounded-lg border border-sidebar-active/40 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-sidebar-active hover:bg-blue-100"
+                            >
+                              + Add Labor Category
+                            </button>
+                          </div>
 
-                        {pdfDrafts.length > 0 && (
-                          <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {pdfDrafts.map((d) => {
-                              const meta = [d.form.location || contextForFile(pdf.fileId).location, d.form.experience]
-                                .filter(Boolean)
-                                .join(" · ");
-                              return (
-                                <li
-                                  key={d.draftId}
-                                  className="flex items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5"
-                                >
-                                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate text-sm font-medium text-ink">
-                                        {d.form.laborCategory}
-                                      </span>
-                                      <span className="shrink-0 rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-700 ring-1 ring-purple-200">
-                                        Manual
-                                      </span>
+                          {pdfDrafts.length > 0 && (
+                            <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {pdfDrafts.map((d) => {
+                                const meta = [
+                                  d.form.location || contextForFile(pdf.fileId).location,
+                                  d.form.experience,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ");
+                                return (
+                                  <li
+                                    key={d.draftId}
+                                    className="flex items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5"
+                                  >
+                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-sm font-medium text-ink">
+                                          {d.form.laborCategory}
+                                        </span>
+                                        <span className="shrink-0 rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-700 ring-1 ring-purple-200">
+                                          Manual
+                                        </span>
+                                      </div>
+                                      {meta && (
+                                        <span className="block truncate text-xs text-ink-subtle">
+                                          {meta}
+                                        </span>
+                                      )}
                                     </div>
-                                    {meta && <span className="block truncate text-xs text-ink-subtle">{meta}</span>}
-                                  </div>
-                                  <div className="flex shrink-0 items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setManualModal({ sourceFileId: pdf.fileId, draftId: d.draftId })}
-                                      className="rounded-md px-2 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-50"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => onDeleteManual?.(d.draftId)}
-                                      className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    );
-                  })()}
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setManualModal({
+                                            sourceFileId: pdf.fileId,
+                                            draftId: d.draftId,
+                                          })
+                                        }
+                                        className="rounded-md px-2 py-1 text-xs font-semibold text-sidebar-active hover:bg-blue-50"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => onDeleteManual?.(d.draftId)}
+                                        className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })()}
                 </div>
               );
             })}
@@ -378,7 +415,13 @@ export function ExtractionResults({
 
       {/* Actions */}
       <div className="shrink-0 flex items-center justify-between">
-        <Button variant="secondary" size="md" className="w-auto" onClick={onBack} disabled={committing}>
+        <Button
+          variant="secondary"
+          size="md"
+          className="w-auto"
+          onClick={onBack}
+          disabled={committing}
+        >
           ← Back
         </Button>
         <Button size="lg" className="w-auto" onClick={onContinue} disabled={committing}>

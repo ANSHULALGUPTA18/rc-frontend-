@@ -50,11 +50,7 @@ export async function runPool<T, R>(
   items: T[],
   concurrency: number,
   worker: (item: T, index: number) => Promise<R>,
-  onSettled?: (
-    outcome: PoolOutcome<T, R>,
-    completed: number,
-    total: number,
-  ) => void,
+  onSettled?: (outcome: PoolOutcome<T, R>, completed: number, total: number) => void,
 ): Promise<PoolSummary<T, R>> {
   const total = items.length;
 

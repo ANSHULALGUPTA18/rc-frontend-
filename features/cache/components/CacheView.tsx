@@ -9,7 +9,15 @@ import { ConfirmDialog } from "@/features/jd-upload/components/ConfirmDialog";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import { getCacheStats, clearCache, type CacheStat } from "@/features/cache/api/client";
 
-function StatCard({ title, subtitle, stat }: { title: string; subtitle: string; stat: CacheStat }): React.ReactElement {
+function StatCard({
+  title,
+  subtitle,
+  stat,
+}: {
+  title: string;
+  subtitle: string;
+  stat: CacheStat;
+}): React.ReactElement {
   const pct = Math.round(stat.hitRate * 100);
   return (
     <div className="rounded-card border border-line bg-surface p-5 shadow-card">
@@ -78,8 +86,8 @@ export function CacheView(): React.ReactElement {
         <div>
           <h1 className="text-3xl font-bold text-ink">Cache</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            AI response cache effectiveness — how often duplicate JDs and roles are served
-            from cache instead of calling GPT-4o, Gemini, or GPT pricing.
+            AI response cache effectiveness — how often duplicate JDs and roles are served from
+            cache instead of calling GPT-4o, Gemini, or GPT pricing.
           </p>
         </div>
         <Button

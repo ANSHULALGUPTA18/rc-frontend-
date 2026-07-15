@@ -68,7 +68,8 @@ export function VisionConfirmModal({
               Scanned Document Detected
             </h2>
             <p className="mt-0.5 text-sm text-ink-muted">
-              This document contains image pages that require AI Vision processing to extract positions.
+              This document contains image pages that require AI Vision processing to extract
+              positions.
             </p>
           </div>
         </div>
@@ -103,7 +104,8 @@ export function VisionConfirmModal({
             <path d="M12 16v-4M12 8h.01" />
           </svg>
           <p className="text-xs text-amber-800">
-            GPT-4o Vision will read all {pageCount} pages and extract job positions. You will then select a pricing prompt before recommendations are generated.
+            GPT-4o Vision will read all {pageCount} pages and extract job positions. You will then
+            select a pricing prompt before recommendations are generated.
           </p>
         </div>
 

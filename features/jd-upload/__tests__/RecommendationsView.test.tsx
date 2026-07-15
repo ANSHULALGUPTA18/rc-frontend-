@@ -104,10 +104,9 @@ describe("RecommendationsView — pooled pricing", () => {
     );
 
     // Wait until all 12 JDs are priced (rates rendered)
-    await waitFor(
-      () => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(12),
-      { timeout: 5000 },
-    );
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(12), {
+      timeout: 5000,
+    });
 
     expect(client.priceJd).toHaveBeenCalledTimes(12);
     expect(peak).toBeLessThanOrEqual(5);
@@ -135,9 +134,7 @@ describe("RecommendationsView — pooled pricing", () => {
     await userEvent.click(retry);
 
     // Both JDs now priced → two rate blocks
-    await waitFor(() =>
-      expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(2),
-    );
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(2));
   });
 
   it("skips priceJd when a JD has no prompt config but still loads history", async () => {
@@ -145,9 +142,7 @@ describe("RecommendationsView — pooled pricing", () => {
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
 
     const jds = makeJds(1);
-    render(
-      <RecommendationsView submittedJds={jds} promptConfigs={{}} onDone={() => {}} />,
-    );
+    render(<RecommendationsView submittedJds={jds} promptConfigs={{}} onDone={() => {}} />);
 
     await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(1));
     expect(client.priceJd).not.toHaveBeenCalled();

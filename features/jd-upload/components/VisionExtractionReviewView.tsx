@@ -148,7 +148,9 @@ export function VisionExtractionReviewView({
                     {f.experienceRequired && (
                       <div>
                         <dt className="text-xs text-ink-muted">Experience</dt>
-                        <dd className="mt-0.5 text-sm font-medium text-ink">{f.experienceRequired}</dd>
+                        <dd className="mt-0.5 text-sm font-medium text-ink">
+                          {f.experienceRequired}
+                        </dd>
                       </div>
                     )}
                     {f.sector && (
@@ -171,11 +173,7 @@ export function VisionExtractionReviewView({
                       <p className="mb-1.5 text-xs text-ink-muted">Skills</p>
                       <div className="flex flex-wrap gap-1.5">
                         {allSkills.map((skill) => (
-                          <SkillPill
-                            key={skill}
-                            label={skill}
-                            mandatory={mandatory.has(skill)}
-                          />
+                          <SkillPill key={skill} label={skill} mandatory={mandatory.has(skill)} />
                         ))}
                       </div>
                     </div>

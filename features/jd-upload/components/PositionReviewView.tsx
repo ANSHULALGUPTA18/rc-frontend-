@@ -201,8 +201,8 @@ export function PositionReviewView({
   onBack,
   onConfirm,
 }: PositionReviewViewProps): React.ReactElement {
-  const [checked, setChecked] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(positions.map((p) => [p.tempId, true])),
+  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(positions.map((p) => [p.tempId, true])),
   );
 
   const selectedCount = Object.values(checked).filter(Boolean).length;
@@ -221,18 +221,20 @@ export function PositionReviewView({
   const handleConfirm = () => {
     const confirmed = positions
       .filter((p) => checked[p.tempId])
-      .map((p): ConfirmPositionItem => ({
-        tempId: p.tempId,
-        title: p.title,
-        rawText: p.rawText,
-        location: p.location,
-        sector: p.sector,
-        skills: p.skills,
-        mandatorySkills: p.mandatorySkills,
-        experienceLevel: p.experienceLevel,
-        employmentType: p.employmentType,
-        detectionSource: p.detectionSource,
-      }));
+      .map(
+        (p): ConfirmPositionItem => ({
+          tempId: p.tempId,
+          title: p.title,
+          rawText: p.rawText,
+          location: p.location,
+          sector: p.sector,
+          skills: p.skills,
+          mandatorySkills: p.mandatorySkills,
+          experienceLevel: p.experienceLevel,
+          employmentType: p.employmentType,
+          detectionSource: p.detectionSource,
+        }),
+      );
     onConfirm(confirmed);
   };
 

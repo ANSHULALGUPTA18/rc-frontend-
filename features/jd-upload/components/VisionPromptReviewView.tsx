@@ -51,7 +51,8 @@ export function VisionPromptReviewView({
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
             <span className="text-sm text-blue-800">
-              <strong>Read-only.</strong> This prompt was locked before AI Vision processing began and cannot be changed.
+              <strong>Read-only.</strong> This prompt was locked before AI Vision processing began
+              and cannot be changed.
             </span>
           </div>
 
@@ -115,8 +116,8 @@ export function VisionPromptReviewView({
 
             {/* Explanation */}
             <p className="mt-4 text-xs text-ink-muted">
-              This instruction was sent to GPT-4o alongside all document pages. The model used it
-              to generate the pricing recommendations shown in the results.
+              This instruction was sent to GPT-4o alongside all document pages. The model used it to
+              generate the pricing recommendations shown in the results.
             </p>
           </div>
 

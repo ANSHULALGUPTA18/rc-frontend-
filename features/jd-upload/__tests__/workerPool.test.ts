@@ -2,8 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { runPool } from "@/features/jd-upload/lib/workerPool";
 
 /** Resolve after `ms`. */
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("runPool", () => {
   it("processes every item and returns results in original order", async () => {
