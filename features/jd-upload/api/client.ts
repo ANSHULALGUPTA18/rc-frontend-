@@ -547,6 +547,33 @@ export async function submitForApproval(
   return { approvalId: res.approval_id, status: res.status };
 }
 
+/**
+ * Submit MANY recommendations for approval in one action.
+ * Admins receive ONE combined Outlook email (Approve All / Reject All)
+ * instead of one email per JD.
+ */
+export async function submitBatchForApproval(
+  recIds: string[],
+  notes: string | null,
+  msal?: MsalTokenContext,
+): Promise<{ submitted: string[]; skipped: { recommendationId: string; reason: string }[] }> {
+  if (IS_MOCK) {
+    return { submitted: recIds, skipped: [] };
+  }
+  const res = await apiFetch<{
+    submitted: string[];
+    skipped: { recommendation_id: string; reason: string }[];
+  }>(`/v1/recommendations/submit-batch`, {
+    method: "POST",
+    body: JSON.stringify({ rec_ids: recIds, notes }),
+    msal,
+  });
+  return {
+    submitted: res.submitted,
+    skipped: res.skipped.map((s) => ({ recommendationId: s.recommendation_id, reason: s.reason })),
+  };
+}
+
 // ─── Pricing Excel export ─────────────────────────────────────────────────────
 
 /** One row in the exported rate card (camelCase; mapped to snake_case on send). */

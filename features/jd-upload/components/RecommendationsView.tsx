@@ -10,6 +10,7 @@ import {
   exportPricingExcel,
   getPricingHistory,
   priceJd,
+  submitBatchForApproval,
   type PricingExportRow,
 } from "@/features/jd-upload/api/client";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
@@ -132,6 +133,43 @@ export function RecommendationsView({
   const failedCount = statuses.filter((s) => s === "failed").length;
   const settled = doneCount + failedCount;
   const allSettled = total > 0 && settled === total;
+
+  // ── Batch "Send All for Approval" ──────────────────────────────────────────
+  // One combined email covering every draft recommendation, instead of one
+  // email per JD (30-40 JDs → 1 email with Approve All / Reject All).
+  type BatchState = "idle" | "submitting" | "submitted" | "error";
+  const [batchState, setBatchState] = useState<BatchState>("idle");
+
+  const draftRecs = submittedJds
+    .map((jd) => pricing[jd.jdId]?.rec)
+    .filter((rec): rec is PricingVersion => rec != null && rec.submissionStatus === "draft");
+
+  const handleSendAll = async (): Promise<void> => {
+    if (draftRecs.length === 0) return;
+    setBatchState("submitting");
+    try {
+      const result = await submitBatchForApproval(
+        draftRecs.map((rec) => rec.id),
+        null,
+        msal,
+      );
+      const submitted = new Set(result.submitted);
+      // Flip submitted recs to pending locally so cards show the new state.
+      setPricing((prev) =>
+        Object.fromEntries(
+          Object.entries(prev).map(([jdId, st]) => [
+            jdId,
+            st.rec && submitted.has(st.rec.id)
+              ? { ...st, rec: { ...st.rec, submissionStatus: "pending_approval" } }
+              : st,
+          ]),
+        ),
+      );
+      setBatchState("submitted");
+    } catch {
+      setBatchState("error");
+    }
+  };
 
   // ── Excel export ────────────────────────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
@@ -260,6 +298,36 @@ export function RecommendationsView({
           <span />
         )}
         <div className="flex items-center gap-3">
+          {batchState === "submitted" ? (
+            <span className="text-sm font-semibold text-green-700">
+              ✓ Sent for approval — admins received one combined email
+            </span>
+          ) : (
+            draftRecs.length > 1 && (
+              <Button
+                size="lg"
+                className="w-auto"
+                disabled={batchState === "submitting" || !allSettled}
+                onClick={() => void handleSendAll()}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                >
+                  <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+                {batchState === "submitting"
+                  ? "Sending…"
+                  : `Send All for Approval (${draftRecs.length})`}
+              </Button>
+            )
+          )}
           <Button
             variant="secondary"
             size="lg"
@@ -289,6 +357,11 @@ export function RecommendationsView({
 
       {exportError && (
         <p className="mt-2 text-right text-xs text-red-600">Export failed. Please try again.</p>
+      )}
+      {batchState === "error" && (
+        <p className="mt-2 text-right text-xs text-red-600">
+          Batch submit failed. Please try again or send positions individually.
+        </p>
       )}
     </AppShell>
   );

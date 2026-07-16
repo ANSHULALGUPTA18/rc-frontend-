@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { PositionDetailModal } from "@/features/jd-upload/components/PositionDetailModal";
 import { AddLaborCategoryModal } from "@/features/jd-upload/components/AddLaborCategoryModal";
+import { ConfirmDialog } from "@/features/jd-upload/components/ConfirmDialog";
 import { deriveContextDefaults } from "@/features/jd-upload/lib/manualPosition";
 import type {
   FileExtractionProgress,
@@ -24,6 +25,12 @@ interface ExtractionResultsProps {
   /** Save a manual position under a PDF — draftId null creates, else updates. */
   onSaveManual?: (draftId: string | null, form: ManualPositionForm, sourceFileId: string) => void;
   onDeleteManual?: (draftId: string) => void;
+  /**
+   * Remove an EXTRACTED position from the workflow (e.g. a sample form the AI
+   * over-detected). The position is dropped before Prompt Selection and never
+   * priced. Identified by jd.fileId (the per-position key).
+   */
+  onDeletePosition?: (fileId: string) => void;
   /** True while manual positions are being committed on Continue. */
   committing?: boolean;
 }
@@ -104,37 +111,64 @@ function pdfType(positions: SubmittedJd[]): string {
 function PositionRow({
   jd,
   onSelect,
+  onDelete,
 }: {
   jd: SubmittedJd;
   onSelect: (jd: SubmittedJd) => void;
+  /** When provided, shows a trash icon so over-detected positions can be removed. */
+  onDelete?: (jd: SubmittedJd) => void;
 }): React.ReactElement {
   const f = jd.extractedFields;
   const title = f.jobTitle ?? stripExtension(jd.fileName);
   const meta = [f.location, f.experienceRequired].filter(Boolean).join(" · ");
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(jd)}
-      className="flex w-full items-start gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 text-left transition-colors hover:border-sidebar-active/40 hover:bg-surface-subtle"
-    >
-      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
-      <div className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-ink">{title}</span>
-        {meta && <span className="block truncate text-xs text-ink-subtle">{meta}</span>}
-      </div>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-subtle"
+    <div className="flex w-full items-start gap-1 rounded-lg border border-line bg-surface transition-colors hover:border-sidebar-active/40 hover:bg-surface-subtle">
+      <button
+        type="button"
+        onClick={() => onSelect(jd)}
+        className="flex min-w-0 flex-1 items-start gap-3 px-3 py-2.5 text-left"
       >
-        <path d="m9 18 6-6-6-6" />
-      </svg>
-    </button>
+        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-active" />
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-ink">{title}</span>
+          {meta && <span className="block truncate text-xs text-ink-subtle">{meta}</span>}
+        </div>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-subtle"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </button>
+      {onDelete && (
+        <button
+          type="button"
+          aria-label={`Delete position ${title}`}
+          title="Delete this position"
+          onClick={() => onDelete(jd)}
+          className="mr-1 mt-2 shrink-0 rounded-md p-1.5 text-ink-subtle hover:bg-red-50 hover:text-red-600"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="h-4 w-4"
+          >
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6" />
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -147,11 +181,15 @@ export function ExtractionResults({
   manualDrafts = [],
   onSaveManual,
   onDeleteManual,
+  onDeletePosition,
   committing = false,
 }: ExtractionResultsProps): React.ReactElement {
   const [tab, setTab] = useState<"by-pdf" | "all">("by-pdf");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [detailJd, setDetailJd] = useState<SubmittedJd | null>(null);
+  // Position pending delete confirmation (trash icon clicked, not yet confirmed).
+  const [pendingDelete, setPendingDelete] = useState<SubmittedJd | null>(null);
+  const deleteHandler = onDeletePosition ? setPendingDelete : undefined;
   // Manual labor-category modal — carries the PDF it's attached to.
   // null = closed; draftId null = add new under sourceFileId.
   const [manualModal, setManualModal] = useState<{
@@ -312,7 +350,12 @@ export function ExtractionResults({
                     <div className="border-t border-line bg-surface-subtle p-4">
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {positions.map((jd) => (
-                          <PositionRow key={jd.fileId} jd={jd} onSelect={setDetailJd} />
+                          <PositionRow
+                            key={jd.fileId}
+                            jd={jd}
+                            onSelect={setDetailJd}
+                            onDelete={deleteHandler}
+                          />
                         ))}
                       </div>
                     </div>
@@ -407,7 +450,12 @@ export function ExtractionResults({
           // All Positions — flat list across every PDF
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {extractedJds.map((jd) => (
-              <PositionRow key={jd.fileId} jd={jd} onSelect={setDetailJd} />
+              <PositionRow
+                key={jd.fileId}
+                jd={jd}
+                onSelect={setDetailJd}
+                onDelete={deleteHandler}
+              />
             ))}
           </div>
         )}
@@ -431,6 +479,22 @@ export function ExtractionResults({
 
       {/* Per-position extracted-fields detail */}
       <PositionDetailModal jd={detailJd} onClose={() => setDetailJd(null)} />
+
+      {/* Confirm removing an over-detected position */}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this position?"
+        message={`"${
+          pendingDelete?.extractedFields.jobTitle ??
+          (pendingDelete ? stripExtension(pendingDelete.fileName) : "")
+        }" will be removed from this batch and will not be priced. This cannot be undone here — re-upload the file to get it back.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (pendingDelete) onDeletePosition?.(pendingDelete.fileId);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       {/* Add / edit a manual labor category (scoped to one PDF) */}
       <AddLaborCategoryModal

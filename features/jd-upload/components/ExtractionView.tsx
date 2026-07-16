@@ -225,6 +225,8 @@ interface ExtractionViewProps {
   manualDrafts?: ManualPositionDraft[];
   onSaveManual?: (draftId: string | null, form: ManualPositionForm, sourceFileId: string) => void;
   onDeleteManual?: (draftId: string) => void;
+  /** Remove an extracted position from the workflow (see ExtractionResults). */
+  onDeletePosition?: (fileId: string) => void;
   committing?: boolean;
 }
 
@@ -265,6 +267,7 @@ export function ExtractionView({
   manualDrafts,
   onSaveManual,
   onDeleteManual,
+  onDeletePosition,
   committing,
 }: ExtractionViewProps): React.ReactElement {
   const [selectedId, setSelectedId] = useState<string>(submittedJds[0]?.fileId ?? "");
@@ -315,6 +318,7 @@ export function ExtractionView({
               manualDrafts={manualDrafts}
               onSaveManual={onSaveManual}
               onDeleteManual={onDeleteManual}
+              onDeletePosition={onDeletePosition}
               committing={committing}
             />
           ) : (

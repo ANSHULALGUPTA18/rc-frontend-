@@ -164,3 +164,66 @@ describe("ExtractionResults — By PDF grouping", () => {
     expect(onRetryFile).toHaveBeenCalledWith("p2");
   });
 });
+
+describe("ExtractionResults — delete position", () => {
+  it("shows no delete icons when onDeletePosition is not provided", async () => {
+    const { fileProgress, submittedJds } = scenario();
+    render(
+      <ExtractionResults
+        submittedJds={submittedJds}
+        fileProgress={fileProgress}
+        onBack={() => {}}
+        onContinue={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getAllByRole("button", { name: /View Positions/ })[0]);
+    expect(screen.queryByRole("button", { name: /Delete position/ })).not.toBeInTheDocument();
+  });
+
+  it("deletes a position after confirming the dialog", async () => {
+    const { fileProgress, submittedJds } = scenario();
+    const onDeletePosition = vi.fn();
+    render(
+      <ExtractionResults
+        submittedJds={submittedJds}
+        fileProgress={fileProgress}
+        onBack={() => {}}
+        onContinue={() => {}}
+        onDeletePosition={onDeletePosition}
+      />,
+    );
+
+    await userEvent.click(screen.getAllByRole("button", { name: /View Positions/ })[0]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete position Enterprise IT Architect" }),
+    );
+
+    // Confirmation dialog appears; nothing deleted yet
+    expect(screen.getByText("Delete this position?")).toBeInTheDocument();
+    expect(onDeletePosition).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(onDeletePosition).toHaveBeenCalledWith("a");
+  });
+
+  it("does not delete when the dialog is cancelled", async () => {
+    const { fileProgress, submittedJds } = scenario();
+    const onDeletePosition = vi.fn();
+    render(
+      <ExtractionResults
+        submittedJds={submittedJds}
+        fileProgress={fileProgress}
+        onBack={() => {}}
+        onContinue={() => {}}
+        onDeletePosition={onDeletePosition}
+      />,
+    );
+
+    await userEvent.click(screen.getAllByRole("button", { name: /View Positions/ })[0]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete position Solution Architect" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onDeletePosition).not.toHaveBeenCalled();
+  });
+});

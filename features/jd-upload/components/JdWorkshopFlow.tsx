@@ -307,6 +307,9 @@ export function JdWorkshopFlow(): React.ReactElement {
         manualDrafts={manualDrafts}
         onSaveManual={_saveManual}
         onDeleteManual={_deleteManual}
+        onDeletePosition={(fileId) =>
+          setSubmittedJds((prev) => prev.filter((jd) => jd.fileId !== fileId))
+        }
         committing={committingManual}
       />
     );
