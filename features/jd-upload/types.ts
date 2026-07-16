@@ -189,7 +189,7 @@ export interface ConfirmedJD {
 
 export const ACCEPTED_JD_EXTENSIONS = [".pdf", ".docx", ".txt"] as const;
 export const ACCEPTED_JD_MIME =
-  "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
+  "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 export const MAX_JD_FILE_BYTES = 10 * 1024 * 1024;
 
 // ─── Backend JD / recommendation types ─────────────────────────────────────────

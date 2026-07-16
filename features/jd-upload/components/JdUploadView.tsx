@@ -162,7 +162,7 @@ export function JdUploadView({
                         multiple
                         accept={ACCEPTED_JD_MIME}
                         title="Click or drag & drop multiple files"
-                        hint={`Supports PDF, DOCX, TXT — Max 10MB each — ${files.length}/20 added`}
+                        hint={`Supports PDF, DOCX, TXT, XLSX — Max 10MB each — ${files.length}/20 added`}
                         onFilesSelected={addFiles}
                       />
                     )}
