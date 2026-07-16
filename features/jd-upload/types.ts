@@ -163,6 +163,14 @@ export type PricingStatus = "pending" | "pricing" | "done" | "failed";
 // ─── Pricing history ────────────────────────────────────────────────────────────
 
 /** One entry in a JD's pricing history (GET /v1/jds/{jdId}/pricing-history). */
+/** One offshore/nearshore rate tier: pay + bill ranges in USD/hr. */
+export interface GlobalRateTier {
+  payLow: number;
+  payHigh: number;
+  billLow: number;
+  billHigh: number;
+}
+
 export interface PricingVersion {
   id: string;
   versionNumber: number;
@@ -177,6 +185,8 @@ export interface PricingVersion {
   explanation: string | null;
   submissionStatus: string;
   createdAt: string;
+  /** Offshore / nearshore rates when the pricing model provided them. */
+  globalRates?: { offshore?: GlobalRateTier; nearshore?: GlobalRateTier } | null;
 }
 
 /** One JD created by confirm-positions — mirrors the single-JD response shape. */

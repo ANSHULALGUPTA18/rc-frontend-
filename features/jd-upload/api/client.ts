@@ -312,8 +312,22 @@ export async function getPricingHistory(
       explanation: string | null;
       submission_status: string;
       created_at: string;
+      global_rates?: Record<
+        string,
+        { pay_low: number; pay_high: number; bill_low: number; bill_high: number }
+      > | null;
     }[]
   >(`/v1/jds/${jdId}/pricing-history`, { msal });
+
+  const mapTier = (t?: {
+    pay_low: number;
+    pay_high: number;
+    bill_low: number;
+    bill_high: number;
+  }) =>
+    t
+      ? { payLow: t.pay_low, payHigh: t.pay_high, billLow: t.bill_low, billHigh: t.bill_high }
+      : undefined;
 
   return res.map((v) => ({
     id: v.id,
@@ -329,6 +343,12 @@ export async function getPricingHistory(
     explanation: v.explanation,
     submissionStatus: v.submission_status,
     createdAt: v.created_at,
+    globalRates: v.global_rates
+      ? {
+          offshore: mapTier(v.global_rates.offshore),
+          nearshore: mapTier(v.global_rates.nearshore),
+        }
+      : null,
   }));
 }
 
@@ -586,6 +606,10 @@ export interface PricingExportRow {
   skills: string | null;
   payRateLow: number | null;
   payRateHigh: number | null;
+  offshorePay?: string | null;
+  offshoreBill?: string | null;
+  nearshorePay?: string | null;
+  nearshoreBill?: string | null;
   billRateLow: number | null;
   billRateHigh: number | null;
   markupPct: number | null;
@@ -617,6 +641,10 @@ export async function exportPricingExcel(
       pay_rate_high: r.payRateHigh,
       bill_rate_low: r.billRateLow,
       bill_rate_high: r.billRateHigh,
+      offshore_pay: r.offshorePay ?? null,
+      offshore_bill: r.offshoreBill ?? null,
+      nearshore_pay: r.nearshorePay ?? null,
+      nearshore_bill: r.nearshoreBill ?? null,
       markup_pct: r.markupPct,
       confidence: r.confidence,
       prompt: r.prompt,

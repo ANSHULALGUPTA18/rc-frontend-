@@ -117,6 +117,42 @@ export function RecommendationCard({
           </div>
         </div>
 
+        {/* Offshore / nearshore tiers (when the pricing model provided them) */}
+        {(rec.globalRates?.offshore || rec.globalRates?.nearshore) && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {rec.globalRates?.offshore && (
+              <div className="rounded-lg border border-line bg-surface-muted p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Offshore
+                </p>
+                <p className="mt-1 text-sm font-bold text-ink">
+                  Pay ${rec.globalRates.offshore.payLow.toFixed(2)} – $
+                  {rec.globalRates.offshore.payHigh.toFixed(2)}/hr
+                </p>
+                <p className="text-xs text-ink-muted">
+                  Bill ${rec.globalRates.offshore.billLow.toFixed(2)} – $
+                  {rec.globalRates.offshore.billHigh.toFixed(2)}/hr
+                </p>
+              </div>
+            )}
+            {rec.globalRates?.nearshore && (
+              <div className="rounded-lg border border-line bg-surface-muted p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Nearshore
+                </p>
+                <p className="mt-1 text-sm font-bold text-ink">
+                  Pay ${rec.globalRates.nearshore.payLow.toFixed(2)} – $
+                  {rec.globalRates.nearshore.payHigh.toFixed(2)}/hr
+                </p>
+                <p className="text-xs text-ink-muted">
+                  Bill ${rec.globalRates.nearshore.billLow.toFixed(2)} – $
+                  {rec.globalRates.nearshore.billHigh.toFixed(2)}/hr
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Explanation */}
         {rec.explanation && (
           <div className="rounded-lg border border-line bg-blue-50 p-3">

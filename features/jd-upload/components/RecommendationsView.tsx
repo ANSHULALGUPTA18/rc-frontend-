@@ -184,6 +184,15 @@ export function RecommendationsView({
         const n = parseFloat(v);
         return Number.isFinite(n) ? n : null;
       };
+      const tierText = (
+        t: { payLow: number; payHigh: number; billLow: number; billHigh: number } | undefined,
+        kind: "pay" | "bill",
+      ): string | null =>
+        t
+          ? kind === "pay"
+            ? `$${t.payLow.toFixed(2)} - $${t.payHigh.toFixed(2)}`
+            : `$${t.billLow.toFixed(2)} - $${t.billHigh.toFixed(2)}`
+          : null;
       return [
         {
           position: f.jobTitle ?? jd.fileName,
@@ -196,6 +205,10 @@ export function RecommendationsView({
           payRateHigh: num(rec.payRateHigh),
           billRateLow: num(rec.billRateLow),
           billRateHigh: num(rec.billRateHigh),
+          offshorePay: tierText(rec.globalRates?.offshore, "pay"),
+          offshoreBill: tierText(rec.globalRates?.offshore, "bill"),
+          nearshorePay: tierText(rec.globalRates?.nearshore, "pay"),
+          nearshoreBill: tierText(rec.globalRates?.nearshore, "bill"),
           markupPct: num(rec.markupPct),
           confidence: rec.confidenceScore,
           prompt: rec.promptName,
