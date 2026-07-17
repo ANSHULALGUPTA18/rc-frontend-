@@ -118,8 +118,23 @@ export function RecommendationCard({
         </div>
 
         {/* Offshore / nearshore tiers (when the pricing model provided them) */}
-        {(rec.globalRates?.offshore || rec.globalRates?.nearshore) && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {(rec.globalRates?.offshore || rec.globalRates?.nearshore || rec.globalRates?.remote) && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {rec.globalRates?.remote && (
+              <div className="rounded-lg border border-line bg-surface-muted p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                  Remote (US)
+                </p>
+                <p className="mt-1 text-sm font-bold text-ink">
+                  Pay ${rec.globalRates.remote.payLow.toFixed(2)} – $
+                  {rec.globalRates.remote.payHigh.toFixed(2)}/hr
+                </p>
+                <p className="text-xs text-ink-muted">
+                  Bill ${rec.globalRates.remote.billLow.toFixed(2)} – $
+                  {rec.globalRates.remote.billHigh.toFixed(2)}/hr
+                </p>
+              </div>
+            )}
             {rec.globalRates?.offshore && (
               <div className="rounded-lg border border-line bg-surface-muted p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">

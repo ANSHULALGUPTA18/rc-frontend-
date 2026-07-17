@@ -284,6 +284,7 @@ export async function priceJd(
       prompt_name: promptConfig.promptName ?? null,
       location_override: promptConfig.locationOverride,
       sector_override: promptConfig.sectorOverride,
+      rate_tiers: promptConfig.rateTiers ?? null,
     }),
     msal,
   });
@@ -347,6 +348,7 @@ export async function getPricingHistory(
       ? {
           offshore: mapTier(v.global_rates.offshore),
           nearshore: mapTier(v.global_rates.nearshore),
+          remote: mapTier(v.global_rates.remote),
         }
       : null,
   }));
@@ -606,6 +608,8 @@ export interface PricingExportRow {
   skills: string | null;
   payRateLow: number | null;
   payRateHigh: number | null;
+  remotePay?: string | null;
+  remoteBill?: string | null;
   offshorePay?: string | null;
   offshoreBill?: string | null;
   nearshorePay?: string | null;
@@ -641,6 +645,8 @@ export async function exportPricingExcel(
       pay_rate_high: r.payRateHigh,
       bill_rate_low: r.billRateLow,
       bill_rate_high: r.billRateHigh,
+      remote_pay: r.remotePay ?? null,
+      remote_bill: r.remoteBill ?? null,
       offshore_pay: r.offshorePay ?? null,
       offshore_bill: r.offshoreBill ?? null,
       nearshore_pay: r.nearshorePay ?? null,

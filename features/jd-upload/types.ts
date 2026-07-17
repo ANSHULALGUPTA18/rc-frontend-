@@ -86,7 +86,12 @@ export interface ResolvedPromptConfig {
   locationOverride: string | null;
   /** Recruiter-entered sector override; null if left blank. */
   sectorOverride: string | null;
+  /** Extra rate tiers to request: "remote" | "nearshore" | "offshore". */
+  rateTiers?: RateTierId[];
 }
+
+/** Selectable extra rate tiers (onsite is always priced). */
+export type RateTierId = "remote" | "nearshore" | "offshore";
 
 // ─── Pre-flight detection ─────────────────────────────────────────────────────
 
@@ -185,8 +190,12 @@ export interface PricingVersion {
   explanation: string | null;
   submissionStatus: string;
   createdAt: string;
-  /** Offshore / nearshore rates when the pricing model provided them. */
-  globalRates?: { offshore?: GlobalRateTier; nearshore?: GlobalRateTier } | null;
+  /** Extra rate tiers when the pricing model provided them. */
+  globalRates?: {
+    offshore?: GlobalRateTier;
+    nearshore?: GlobalRateTier;
+    remote?: GlobalRateTier;
+  } | null;
 }
 
 /** One JD created by confirm-positions — mirrors the single-JD response shape. */

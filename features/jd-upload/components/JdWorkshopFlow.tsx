@@ -283,6 +283,7 @@ export function JdWorkshopFlow(): React.ReactElement {
     return (
       <PromptSelectionView
         submittedJds={submittedJds}
+        initialConfigs={Object.keys(promptConfigs).length > 0 ? promptConfigs : undefined}
         onBack={() => setStage("extraction")}
         onContinue={(configs) => {
           setPromptConfigs(configs);

@@ -197,14 +197,18 @@ export function RecommendationsView({
         {
           position: f.jobTitle ?? jd.fileName,
           sourcePdf: jd.sourceFileName ?? jd.fileName,
-          location: f.location,
-          sector: f.sector,
+          // The Prompt Selection overrides are what pricing actually used —
+          // they win over the (possibly empty) extracted values.
+          location: promptConfigs[jd.fileId]?.locationOverride || f.location,
+          sector: promptConfigs[jd.fileId]?.sectorOverride || f.sector,
           experience: f.experienceRequired,
           skills: f.skills.length > 0 ? f.skills.join(", ") : null,
           payRateLow: num(rec.payRateLow),
           payRateHigh: num(rec.payRateHigh),
           billRateLow: num(rec.billRateLow),
           billRateHigh: num(rec.billRateHigh),
+          remotePay: tierText(rec.globalRates?.remote, "pay"),
+          remoteBill: tierText(rec.globalRates?.remote, "bill"),
           offshorePay: tierText(rec.globalRates?.offshore, "pay"),
           offshoreBill: tierText(rec.globalRates?.offshore, "bill"),
           nearshorePay: tierText(rec.globalRates?.nearshore, "pay"),

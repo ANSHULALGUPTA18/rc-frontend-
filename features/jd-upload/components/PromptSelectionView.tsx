@@ -11,7 +11,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
 import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
-import type { ResolvedPromptConfig, SubmittedJd } from "@/features/jd-upload/types";
+import type { RateTierId, ResolvedPromptConfig, SubmittedJd } from "@/features/jd-upload/types";
 
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   {
@@ -117,6 +117,12 @@ interface PromptSelectionViewProps {
   onBack: () => void;
   /** Called with a config entry per fileId when the recruiter clicks Continue. */
   onContinue: (configs: Record<string, ResolvedPromptConfig>) => void;
+  /**
+   * Previously-resolved configs (set when navigating BACK from the
+   * Recommendations stage). Restores location/sector, prompt choice, and
+   * rate tiers so the recruiter's entries aren't lost.
+   */
+  initialConfigs?: Record<string, ResolvedPromptConfig>;
 }
 
 /** A queue item is either a single file or one of N extracted positions. */
@@ -129,6 +135,7 @@ export function PromptSelectionView({
   submittedJds = [],
   onBack,
   onContinue,
+  initialConfigs,
 }: PromptSelectionViewProps): React.ReactElement {
   // The queue is always driven by the created JDs — configs must be keyed by
   // jd.fileId so RecommendationsView can look each one up for pricing. One PDF
@@ -146,10 +153,43 @@ export function PromptSelectionView({
   // Which "apply to all" confirmation is pending (null = closed).
   const [confirmApply, setConfirmApply] = useState<"prompt" | "location-sector" | null>(null);
 
+  // Batch-wide extra rate tiers. Onsite (US) is always priced; these control
+  // which additional tiers the AI is asked for. All on by default.
+  const [rateTiers, setRateTiers] = useState<Record<RateTierId, boolean>>(() => {
+    const saved = initialConfigs ? Object.values(initialConfigs)[0]?.rateTiers : undefined;
+    if (saved) {
+      return {
+        remote: saved.includes("remote"),
+        nearshore: saved.includes("nearshore"),
+        offshore: saved.includes("offshore"),
+      };
+    }
+    return { remote: true, nearshore: true, offshore: true };
+  });
+  const selectedTiers = (Object.keys(rateTiers) as RateTierId[]).filter((t) => rateTiers[t]);
+
   const [configs, setConfigs] = useState<Record<string, FileConfig>>(() =>
     Object.fromEntries(
       queueItems.map((item) => {
         const jd = submittedJds.find((j) => j.fileId === item.id);
+        const saved = initialConfigs?.[item.id];
+        if (saved) {
+          // Coming BACK from Recommendations — restore what was entered.
+          const isCustom = saved.promptTemplateId == null;
+          const isEdited = (saved.promptName ?? "").endsWith("(edited)");
+          return [
+            item.id,
+            {
+              ...defaultConfig(),
+              promptMode: isCustom ? ("custom" as const) : ("default" as const),
+              promptTemplateId: saved.promptTemplateId ?? defaultConfig().promptTemplateId,
+              customContent: isCustom ? saved.promptContent : "",
+              templateOverride: !isCustom && isEdited ? saved.promptContent : null,
+              location: saved.locationOverride ?? jd?.extractedFields?.location ?? "",
+              sector: saved.sectorOverride ?? jd?.extractedFields?.sector ?? "",
+            },
+          ];
+        }
         return [
           item.id,
           {
@@ -481,6 +521,42 @@ export function PromptSelectionView({
                 </div>
               </div>
 
+              <div className="shrink-0 rounded-card border border-line bg-surface p-4 shadow-card">
+                <p className="text-sm font-semibold text-ink">Rate tiers to include</p>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Onsite (US) is always included. Untick tiers this bid doesn&apos;t need — they
+                  apply to every position in this batch.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-4">
+                  <label className="flex cursor-not-allowed items-center gap-2 text-sm text-ink-muted">
+                    <input type="checkbox" checked disabled className="h-4 w-4" />
+                    Onsite (US)
+                  </label>
+                  {(
+                    [
+                      ["remote", "Remote (US)"],
+                      ["nearshore", "Nearshore (LatAm/Canada)"],
+                      ["offshore", "Offshore (India/PH)"],
+                    ] as [RateTierId, string][]
+                  ).map(([id, label]) => (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-center gap-2 text-sm text-ink"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={rateTiers[id]}
+                        onChange={(e) =>
+                          setRateTiers((prev) => ({ ...prev, [id]: e.target.checked }))
+                        }
+                        className="h-4 w-4 accent-sidebar-active"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="shrink-0 pt-2">
                 <Button
                   size="lg"
@@ -514,6 +590,7 @@ export function PromptSelectionView({
                               : (tpl?.name ?? null),
                         locationOverride: c.location.trim() || null,
                         sectorOverride: c.sector.trim() || null,
+                        rateTiers: selectedTiers,
                       };
                     }
                     onContinue(resolved);
