@@ -47,6 +47,7 @@ const pdf = (
   error,
   sizeBytes: 2_400_000,
   uploadedAt: "2026-07-02T12:45:00.000Z",
+  cache: null,
 });
 
 const scenario = () => ({
@@ -162,6 +163,47 @@ describe("ExtractionResults — By PDF grouping", () => {
     expect(screen.getByText("Vision call failed")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetryFile).toHaveBeenCalledWith("p2");
+  });
+
+  it("shows a Cache Hit badge on a PDF whose extraction was cached", () => {
+    const p1 = pdf("p1", "JD_01_Healthcare.pdf", 2);
+    p1.cache = { hit: true, type: "extraction", tier: "file" };
+    render(
+      <ExtractionResults
+        submittedJds={[jd("a", "p1", "Enterprise IT Architect")]}
+        fileProgress={[p1]}
+        onBack={() => {}}
+        onContinue={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Cache Hit/)).toBeInTheDocument();
+  });
+
+  it("shows a Fresh AI Response badge on a PDF that was not cached", () => {
+    const p1 = pdf("p1", "JD_01_Healthcare.pdf", 2);
+    p1.cache = { hit: false, type: "extraction", tier: null };
+    render(
+      <ExtractionResults
+        submittedJds={[jd("a", "p1", "Enterprise IT Architect")]}
+        fileProgress={[p1]}
+        onBack={() => {}}
+        onContinue={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Fresh AI Response/)).toBeInTheDocument();
+  });
+
+  it("shows no cache badge while cache status is still unknown", () => {
+    render(
+      <ExtractionResults
+        submittedJds={[jd("a", "p1", "Enterprise IT Architect")]}
+        fileProgress={[pdf("p1", "JD_01_Healthcare.pdf", 2)]}
+        onBack={() => {}}
+        onContinue={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/Cache Hit/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Fresh AI Response/)).not.toBeInTheDocument();
   });
 });
 

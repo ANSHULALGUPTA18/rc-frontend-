@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/query-states";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import { submitForApproval } from "@/features/jd-upload/api/client";
+import { CacheBadge } from "@/features/jd-upload/components/CacheBadge";
 import type { PricingStatus, PricingVersion } from "@/features/jd-upload/types";
 
 interface RecommendationCardProps {
@@ -86,7 +87,10 @@ export function RecommendationCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="truncate">{fileName}</CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="truncate">{fileName}</CardTitle>
+          <CacheBadge cache={rec.cache} />
+        </div>
         {rec.promptName && <p className="text-xs text-ink-muted">Prompt: {rec.promptName}</p>}
       </CardHeader>
       <CardContent className="space-y-4">

@@ -19,6 +19,7 @@ import { API_BASE, IS_MOCK } from "@/lib/api/config";
 import { getAccessToken } from "@/lib/auth/token-storage";
 import type { MsalTokenContext } from "@/lib/auth/token-storage";
 import type {
+  CacheMeta,
   ConfirmPositionItem,
   ConfirmedJD,
   ContributingSignal,
@@ -33,6 +34,22 @@ import type {
   SmartUploadResponse,
   SubmittedJd,
 } from "@/features/jd-upload/types";
+
+// ─── Cache metadata mapping (shared by smart-upload + pricing-history) ────────
+
+interface RawCacheMeta {
+  hit: boolean;
+  type: string;
+  tier: string | null;
+}
+
+function mapCacheMeta(raw: RawCacheMeta): CacheMeta {
+  return {
+    hit: raw.hit,
+    type: raw.type === "pricing" ? "pricing" : "extraction",
+    tier: raw.tier,
+  };
+}
 
 // ─── Raw backend response shapes ───────────────────────────────────────────────
 
@@ -317,6 +334,7 @@ export async function getPricingHistory(
         string,
         { pay_low: number; pay_high: number; bill_low: number; bill_high: number }
       > | null;
+      cache?: RawCacheMeta | null;
     }[]
   >(`/v1/jds/${jdId}/pricing-history`, { msal });
 
@@ -351,6 +369,7 @@ export async function getPricingHistory(
           remote: mapTier(v.global_rates.remote),
         }
       : null,
+    cache: v.cache ? mapCacheMeta(v.cache) : null,
   }));
 }
 
@@ -407,6 +426,7 @@ interface RawDetectedPosition {
 interface RawSmartUploadResponse {
   source_filename: string;
   positions: RawDetectedPosition[];
+  cache: RawCacheMeta;
 }
 
 interface RawConfirmedJD {
@@ -466,6 +486,7 @@ export async function smartUpload(
     return {
       sourceFilename: file.name,
       positions: MOCK_MULTI_POSITIONS,
+      cache: { hit: false, type: "extraction", tier: null },
     };
   }
 
@@ -498,6 +519,7 @@ export async function smartUpload(
         detectionSource,
       };
     }),
+    cache: mapCacheMeta(res.cache),
   };
 }
 

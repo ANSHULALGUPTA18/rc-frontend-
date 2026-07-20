@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PositionDetailModal } from "@/features/jd-upload/components/PositionDetailModal";
 import { AddLaborCategoryModal } from "@/features/jd-upload/components/AddLaborCategoryModal";
 import { ConfirmDialog } from "@/features/jd-upload/components/ConfirmDialog";
+import { CacheBadge } from "@/features/jd-upload/components/CacheBadge";
 import { deriveContextDefaults } from "@/features/jd-upload/lib/manualPosition";
 import type {
   FileExtractionProgress,
@@ -275,6 +276,7 @@ export function ExtractionResults({
                               {positions.length} position{positions.length === 1 ? "" : "s"}
                             </span>
                           )}
+                          {!failed && <CacheBadge cache={pdf.cache} />}
                         </div>
                         {failed ? (
                           <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-red-600">

@@ -121,9 +121,21 @@ export interface DetectedPosition {
   detectionSource: "gemini" | "heading_split" | "vision";
 }
 
+/**
+ * Whether an AI response (extraction or pricing) came from cache or was
+ * freshly generated. Observational only — never implies anything about
+ * correctness. No technical details (keys, request ids) included.
+ */
+export interface CacheMeta {
+  hit: boolean;
+  type: "extraction" | "pricing";
+  tier: string | null;
+}
+
 export interface SmartUploadResponse {
   sourceFilename: string;
   positions: DetectedPosition[];
+  cache: CacheMeta;
 }
 
 // ─── Batch extraction progress ──────────────────────────────────────────────────
@@ -144,6 +156,8 @@ export interface FileExtractionProgress {
   sizeBytes?: number;
   /** ISO timestamp when the upload batch started (for display). */
   uploadedAt?: string;
+  /** Extraction cache metadata — null until the smart-upload call resolves. */
+  cache?: CacheMeta | null;
 }
 
 /** One item sent to POST /v1/jds/confirm-positions. */
@@ -196,6 +210,8 @@ export interface PricingVersion {
     nearshore?: GlobalRateTier;
     remote?: GlobalRateTier;
   } | null;
+  /** null when unknown (recommendation predates this field). */
+  cache?: CacheMeta | null;
 }
 
 /** One JD created by confirm-positions — mirrors the single-JD response shape. */

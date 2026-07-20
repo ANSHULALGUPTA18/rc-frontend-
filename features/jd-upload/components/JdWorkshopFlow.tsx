@@ -91,6 +91,7 @@ export function JdWorkshopFlow(): React.ReactElement {
 
   const _extractOnePdf = async (entry: SelectedJdFile): Promise<SubmittedJd[]> => {
     const result = await smartUpload(entry.file, msal);
+    _patchProgress(entry.id, { cache: result.cache });
 
     const items: ConfirmPositionItem[] = result.positions.map((p) => ({
       tempId: p.tempId,
@@ -142,6 +143,7 @@ export function JdWorkshopFlow(): React.ReactElement {
         error: null,
         sizeBytes: f.file.size,
         uploadedAt,
+        cache: null,
       })),
     );
 
@@ -178,7 +180,7 @@ export function JdWorkshopFlow(): React.ReactElement {
     const entry = files.find((f) => f.id === fileId);
     if (!entry) return;
 
-    _patchProgress(fileId, { status: "processing", error: null });
+    _patchProgress(fileId, { status: "processing", error: null, cache: null });
     try {
       const jds = await _extractOnePdf(entry);
       setSubmittedJds((prev) => [...prev, ...jds]);
