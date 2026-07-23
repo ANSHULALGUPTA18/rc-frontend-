@@ -27,10 +27,19 @@ vi.mock("@/lib/auth/useMsalTokenContext", () => ({
 
 vi.mock("@/features/jd-upload/api/client", () => ({
   priceJd: vi.fn(),
+  priceJdBatch: vi.fn(),
   getPricingHistory: vi.fn(),
   submitForApproval: vi.fn(),
   exportPricingExcel: vi.fn(),
 }));
+
+/** Default: the batch call succeeds for every requested JD. */
+const batchSucceeds = () =>
+  vi
+    .mocked(client.priceJdBatch)
+    .mockImplementation(async (jdIds: string[]) =>
+      jdIds.map((jdId) => ({ jdId, status: "pending_review", error: null })),
+    );
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -85,8 +94,64 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("RecommendationsView — pooled pricing", () => {
-  it("never runs more than 5 pricing calls at once", async () => {
+describe("RecommendationsView — batch pricing", () => {
+  it("prices JDs sharing one prompt config in a single batch call", async () => {
+    batchSucceeds();
+    vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
+
+    const jds = makeJds(12);
+    render(
+      <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
+    );
+
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(12), {
+      timeout: 5000,
+    });
+
+    // One shared signature → exactly one request covering all 12.
+    expect(client.priceJdBatch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(client.priceJdBatch).mock.calls[0][0]).toHaveLength(12);
+    expect(client.priceJd).not.toHaveBeenCalled();
+  });
+
+  it("splits positions with different prompts into separate batch calls", async () => {
+    batchSucceeds();
+    vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
+
+    const jds = makeJds(3);
+    const configs = configsFor(jds);
+    // One position gets a custom prompt → its own group.
+    configs["f2"] = { ...configs["f2"], promptContent: "Different prompt." };
+
+    render(<RecommendationsView submittedJds={jds} promptConfigs={configs} onDone={() => {}} />);
+
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(3));
+
+    expect(client.priceJdBatch).toHaveBeenCalledTimes(2);
+    const sizes = vi
+      .mocked(client.priceJdBatch)
+      .mock.calls.map((c) => c[0].length)
+      .sort();
+    expect(sizes).toEqual([1, 2]);
+  });
+
+  it("falls back to per-JD pricing when the batch request itself fails", async () => {
+    vi.mocked(client.priceJdBatch).mockRejectedValue(new Error("network down"));
+    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+    vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
+
+    const jds = makeJds(3);
+    render(
+      <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
+    );
+
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(3));
+    // Every position still priced, one call each.
+    expect(client.priceJd).toHaveBeenCalledTimes(3);
+  });
+
+  it("never runs more than 5 concurrent calls in the fallback pool", async () => {
+    vi.mocked(client.priceJdBatch).mockRejectedValue(new Error("network down"));
     let inFlight = 0;
     let peak = 0;
     vi.mocked(client.priceJd).mockImplementation(async () => {
@@ -103,7 +168,6 @@ describe("RecommendationsView — pooled pricing", () => {
       <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
     );
 
-    // Wait until all 12 JDs are priced (rates rendered)
     await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(12), {
       timeout: 5000,
     });
@@ -113,12 +177,36 @@ describe("RecommendationsView — pooled pricing", () => {
     expect(peak).toBe(5); // pool actually saturates to the cap
   });
 
+  it("marks only the positions the batch reports as failed", async () => {
+    vi.mocked(client.priceJdBatch).mockImplementation(async (jdIds: string[]) =>
+      jdIds.map((jdId) => ({
+        jdId,
+        status: jdId === "jd0" ? "failed" : "pending_review",
+        error: jdId === "jd0" ? "quota exceeded" : null,
+      })),
+    );
+    vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
+
+    const jds = makeJds(3);
+    render(
+      <RecommendationsView submittedJds={jds} promptConfigs={configsFor(jds)} onDone={() => {}} />,
+    );
+
+    // The one failed position offers a Retry; the other two are priced.
+    await screen.findByRole("button", { name: "Retry" });
+    await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(2));
+  });
+
   it("shows Retry on a failed JD and re-prices it on click", async () => {
-    // First priceJd call (jd0) fails; all others succeed.
-    vi.mocked(client.priceJd).mockImplementation(async (jdId: string) => {
-      if (jdId === "jd0") throw new Error("boom");
-      return { jdId, status: "pending_review" };
-    });
+    // The batch reports jd0 as failed; the others succeed.
+    vi.mocked(client.priceJdBatch).mockImplementation(async (jdIds: string[]) =>
+      jdIds.map((jdId) => ({
+        jdId,
+        status: jdId === "jd0" ? "failed" : "pending_review",
+        error: jdId === "jd0" ? "boom" : null,
+      })),
+    );
+    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "jd0", status: "pending_review" });
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
 
     const jds = makeJds(2);
@@ -137,20 +225,21 @@ describe("RecommendationsView — pooled pricing", () => {
     await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(2));
   });
 
-  it("skips priceJd when a JD has no prompt config but still loads history", async () => {
-    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+  it("skips pricing when a JD has no prompt config but still loads history", async () => {
+    batchSucceeds();
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
 
     const jds = makeJds(1);
     render(<RecommendationsView submittedJds={jds} promptConfigs={{}} onDone={() => {}} />);
 
     await waitFor(() => expect(screen.getAllByText(/\/hr/).length).toBeGreaterThanOrEqual(1));
+    expect(client.priceJdBatch).not.toHaveBeenCalled();
     expect(client.priceJd).not.toHaveBeenCalled();
     expect(client.getPricingHistory).toHaveBeenCalledWith("jd0", expect.anything());
   });
 
   it("shows an aggregate progress header that reaches completion", async () => {
-    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+    batchSucceeds();
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
 
     const jds = makeJds(3);
@@ -163,11 +252,14 @@ describe("RecommendationsView — pooled pricing", () => {
   });
 
   it("offers Retry all failed and re-prices every failed JD", async () => {
-    // jd0 and jd1 fail; jd2 succeeds.
-    vi.mocked(client.priceJd).mockImplementation(async (jdId: string) => {
-      if (jdId === "jd0" || jdId === "jd1") throw new Error("boom");
-      return { jdId, status: "pending_review" };
-    });
+    // jd0 and jd1 come back failed; jd2 succeeds.
+    vi.mocked(client.priceJdBatch).mockImplementation(async (jdIds: string[]) =>
+      jdIds.map((jdId) => ({
+        jdId,
+        status: jdId === "jd0" || jdId === "jd1" ? "failed" : "pending_review",
+        error: jdId === "jd0" || jdId === "jd1" ? "boom" : null,
+      })),
+    );
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
 
     const jds = makeJds(3);
@@ -180,7 +272,7 @@ describe("RecommendationsView — pooled pricing", () => {
     expect(screen.getByText(/2 failed/)).toBeInTheDocument();
 
     // Make retries succeed, click, expect all 3 priced
-    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+    batchSucceeds();
     await userEvent.click(retryAll);
 
     await waitFor(() => expect(screen.getByText(/3 of 3 priced/)).toBeInTheDocument());
@@ -188,7 +280,7 @@ describe("RecommendationsView — pooled pricing", () => {
   });
 
   it("exports priced rows to Excel", async () => {
-    vi.mocked(client.priceJd).mockResolvedValue({ jdId: "x", status: "pending_review" });
+    batchSucceeds();
     vi.mocked(client.getPricingHistory).mockImplementation(async (jdId: string) => [version(jdId)]);
     vi.mocked(client.exportPricingExcel).mockResolvedValue(undefined);
 
@@ -216,7 +308,7 @@ describe("RecommendationsView — pooled pricing", () => {
 
   it("disables Export until at least one JD is priced", async () => {
     // Pricing hangs (never resolves) so nothing is done yet.
-    vi.mocked(client.priceJd).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(client.priceJdBatch).mockImplementation(() => new Promise(() => {}));
     vi.mocked(client.getPricingHistory).mockImplementation(() => new Promise(() => {}));
 
     const jds = makeJds(1);

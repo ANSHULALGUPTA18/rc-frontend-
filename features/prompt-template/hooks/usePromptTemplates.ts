@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPromptTemplates,
   createPromptTemplate,
+  updatePromptTemplate,
   deletePromptTemplate,
   setDefaultPromptTemplate,
 } from "@/features/prompt-template/api/client";
@@ -27,6 +28,7 @@ interface UsePromptTemplatesResult {
   isLoading: boolean;
   error: Error | null;
   add: (name: string, content: string) => Promise<void>;
+  update: (id: string, name: string, content: string) => Promise<void>;
   setDefault: (id: string) => void;
   remove: (id: string) => void;
 }
@@ -54,6 +56,17 @@ export function usePromptTemplates(): UsePromptTemplatesResult {
     [queryClient],
   );
 
+  const update = useCallback(
+    async (id: string, name: string, content: string) => {
+      await updatePromptTemplate(id, name, content);
+      setLocal((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, name, content, editedAt: new Date() } : t)),
+      );
+      await queryClient.invalidateQueries({ queryKey: ["prompt-templates"] });
+    },
+    [queryClient],
+  );
+
   const setDefault = useCallback((id: string) => {
     setLocal((prev) => prev.map((t) => ({ ...t, isDefault: t.id === id })));
     void setDefaultPromptTemplate(id);
@@ -69,6 +82,7 @@ export function usePromptTemplates(): UsePromptTemplatesResult {
     isLoading,
     error: error as Error | null,
     add,
+    update,
     setDefault,
     remove,
   };

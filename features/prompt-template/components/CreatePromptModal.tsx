@@ -5,28 +5,41 @@ import { Button } from "@/components/ui/button";
 
 const MAX_CHARS = 5000;
 
+interface EditingTemplate {
+  id: string;
+  name: string;
+  content: string;
+}
+
 interface CreatePromptModalProps {
   open: boolean;
   onClose: () => void;
   onCreate: (name: string, content: string) => void;
+  /** When set, the modal edits this existing template instead of creating
+   *  a new one — pre-fills the form and calls onUpdate on submit. */
+  editingTemplate?: EditingTemplate | null;
+  onUpdate?: (id: string, name: string, content: string) => void;
 }
 
 export function CreatePromptModal({
   open,
   onClose,
   onCreate,
+  editingTemplate = null,
+  onUpdate,
 }: CreatePromptModalProps): React.ReactElement | null {
   const nameId = useId();
   const contentId = useId();
   const [name, setName] = useState("");
   const [content, setContent] = useState("");
+  const isEditing = editingTemplate !== null;
 
   useEffect(() => {
     if (open) {
-      setName("");
-      setContent("");
+      setName(editingTemplate?.name ?? "");
+      setContent(editingTemplate?.content ?? "");
     }
-  }, [open]);
+  }, [open, editingTemplate]);
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +57,11 @@ export function CreatePromptModal({
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     if (!canSubmit) return;
-    onCreate(name.trim(), content.trim());
+    if (isEditing && editingTemplate) {
+      onUpdate?.(editingTemplate.id, name.trim(), content.trim());
+    } else {
+      onCreate(name.trim(), content.trim());
+    }
     onClose();
   };
 
@@ -59,10 +76,12 @@ export function CreatePromptModal({
 
       <div className="relative z-10 w-full max-w-lg rounded-xl border border-line bg-surface p-6 shadow-2xl">
         <h2 id="create-prompt-title" className="text-xl font-bold text-ink">
-          Create New Prompt
+          {isEditing ? "Edit Prompt" : "Create New Prompt"}
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Define a new AI instruction set for high-precision extraction and pricing analysis.
+          {isEditing
+            ? "Update this AI instruction set for extraction and pricing analysis."
+            : "Define a new AI instruction set for high-precision extraction and pricing analysis."}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -117,7 +136,7 @@ export function CreatePromptModal({
               className="w-auto"
               disabled={!canSubmit}
             >
-              Create Prompt
+              {isEditing ? "Save Changes" : "Create Prompt"}
             </Button>
           </div>
         </form>

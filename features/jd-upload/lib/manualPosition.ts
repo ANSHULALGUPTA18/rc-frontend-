@@ -88,6 +88,11 @@ export function buildManualConfirmItem(
     mandatorySkills: [],
     experienceLevel: form.experience.trim() || null,
     employmentType: form.employmentType.trim() || null,
+    // The requesting organization isn't shown in the extracted-fields
+    // review UI (SubmittedJd.extractedFields has no client), so there's
+    // nothing to inherit here — manual positions price without it, same
+    // as today.
+    client: null,
     detectionSource: "manual",
   };
 }

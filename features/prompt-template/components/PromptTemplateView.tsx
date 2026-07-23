@@ -7,10 +7,29 @@ import { CreatePromptModal } from "@/features/prompt-template/components/CreateP
 import { PromptCard } from "@/features/prompt-template/components/PromptCard";
 import { usePromptTemplates } from "@/features/prompt-template/hooks/usePromptTemplates";
 import { LoadingSpinner, ErrorState } from "@/components/ui/query-states";
+import type { PromptTemplate } from "@/features/prompt-template/types";
 
 export function PromptTemplateView(): React.ReactElement {
-  const { templates, isLoading, error, add, setDefault, remove } = usePromptTemplates();
+  const { templates, isLoading, error, add, update, setDefault, remove } = usePromptTemplates();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null);
+
+  const openCreateModal = (): void => {
+    setEditingTemplate(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (id: string): void => {
+    const template = templates.find((t) => t.id === id);
+    if (!template) return;
+    setEditingTemplate(template);
+    setModalOpen(true);
+  };
+
+  const closeModal = (): void => {
+    setModalOpen(false);
+    setEditingTemplate(null);
+  };
 
   return (
     <AppShell>
@@ -25,19 +44,25 @@ export function PromptTemplateView(): React.ReactElement {
       {isLoading && <LoadingSpinner />}
       {error && <ErrorState message="Failed to load prompt templates." />}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <AddPromptCard onClick={() => setModalOpen(true)} />
+        <AddPromptCard onClick={openCreateModal} />
         {templates.map((template) => (
           <PromptCard
             key={template.id}
             template={template}
             onSetDefault={setDefault}
-            onEdit={() => {}}
+            onEdit={openEditModal}
             onDelete={remove}
           />
         ))}
       </div>
 
-      <CreatePromptModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={add} />
+      <CreatePromptModal
+        open={modalOpen}
+        onClose={closeModal}
+        onCreate={add}
+        editingTemplate={editingTemplate}
+        onUpdate={update}
+      />
     </AppShell>
   );
 }

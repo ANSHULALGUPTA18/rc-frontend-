@@ -10,9 +10,11 @@ import {
   exportPricingExcel,
   getPricingHistory,
   priceJd,
+  priceJdBatch,
   submitBatchForApproval,
   type PricingExportRow,
 } from "@/features/jd-upload/api/client";
+import { groupByPricingSignature, type PricingGroup } from "@/features/jd-upload/lib/pricingGroups";
 import { useMsalTokenContext } from "@/lib/auth/useMsalTokenContext";
 import type {
   PricingStatus,
@@ -64,8 +66,83 @@ export function RecommendationsView({
     if (config) {
       await priceJd(jd.jdId, config, msal);
     }
+    return readBackLatest(jd);
+  };
+
+  /** Read the newest pricing version for a JD (no pricing call). */
+  const readBackLatest = async (jd: SubmittedJd): Promise<PricingVersion | null> => {
     const versions = await getPricingHistory(jd.jdId, msal);
     return versions.length > 0 ? versions[versions.length - 1] : null;
+  };
+
+  /**
+   * Price every JD, preferring one batch request per pricing signature.
+   *
+   * Positions sharing a prompt/override/tier signature are priced together
+   * so their rates stay consistent relative to each other. If a batch
+   * request itself fails, that group falls back to the per-JD pool — the
+   * same path used before batching existed.
+   */
+  const priceAll = async (jds: SubmittedJd[]): Promise<void> => {
+    const groups = groupByPricingSignature(jds, promptConfigs);
+
+    // JDs with no prompt config aren't priced; still load any history.
+    const ungrouped = jds.filter((jd) => !promptConfigs[jd.fileId]);
+
+    const settleOne = async (jd: SubmittedJd, failed: boolean): Promise<void> => {
+      if (failed) {
+        setJd(jd.jdId, { status: "failed", rec: null, error: "Pricing failed. Please retry." });
+        return;
+      }
+      try {
+        setJd(jd.jdId, { status: "done", rec: await readBackLatest(jd), error: null });
+      } catch {
+        setJd(jd.jdId, { status: "failed", rec: null, error: "Pricing failed. Please retry." });
+      }
+    };
+
+    const runGroup = async (group: PricingGroup): Promise<void> => {
+      for (const jd of group.jds) setJd(jd.jdId, { status: "pricing" });
+
+      let results: { jdId: string; status: string }[];
+      try {
+        results = await priceJdBatch(
+          group.jds.map((jd) => jd.jdId),
+          group.config,
+          msal,
+        );
+      } catch {
+        // Whole request failed (network/5xx) — fall back to the per-JD pool.
+        await runPool(
+          group.jds,
+          MAX_CONCURRENT_PRICING,
+          async (jd) => {
+            setJd(jd.jdId, { status: "pricing" });
+            return priceOne(jd);
+          },
+          (outcome) => {
+            const jd = outcome.item;
+            if (outcome.status === "succeeded") {
+              setJd(jd.jdId, { status: "done", rec: outcome.result ?? null, error: null });
+            } else {
+              setJd(jd.jdId, {
+                status: "failed",
+                rec: null,
+                error: "Pricing failed. Please retry.",
+              });
+            }
+          },
+        );
+        return;
+      }
+
+      const failedIds = new Set(
+        results.filter((r) => r.status !== "pending_review").map((r) => r.jdId),
+      );
+      await Promise.all(group.jds.map((jd) => settleOne(jd, failedIds.has(jd.jdId))));
+    };
+
+    await Promise.all([...groups.map(runGroup), ...ungrouped.map((jd) => settleOne(jd, false))]);
   };
 
   // Kick off pooled pricing once on mount. The ref guard prevents re-running
@@ -74,22 +151,7 @@ export function RecommendationsView({
     if (started.current) return;
     started.current = true;
 
-    void runPool(
-      submittedJds,
-      MAX_CONCURRENT_PRICING,
-      async (jd) => {
-        setJd(jd.jdId, { status: "pricing" });
-        return priceOne(jd);
-      },
-      (outcome) => {
-        const jd = outcome.item;
-        if (outcome.status === "succeeded") {
-          setJd(jd.jdId, { status: "done", rec: outcome.result ?? null, error: null });
-        } else {
-          setJd(jd.jdId, { status: "failed", rec: null, error: "Pricing failed. Please retry." });
-        }
-      },
-    );
+    void priceAll(submittedJds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submittedJds, promptConfigs, msal]);
 
@@ -103,27 +165,11 @@ export function RecommendationsView({
     }
   };
 
-  // Re-run every failed JD through the same 5-wide pool.
+  // Re-run every failed JD, batching them the same way the first pass does.
   const retryAllFailed = async (): Promise<void> => {
     const failedJds = submittedJds.filter((jd) => pricing[jd.jdId]?.status === "failed");
     if (failedJds.length === 0) return;
-
-    await runPool(
-      failedJds,
-      MAX_CONCURRENT_PRICING,
-      async (jd) => {
-        setJd(jd.jdId, { status: "pricing", rec: null, error: null });
-        return priceOne(jd);
-      },
-      (outcome) => {
-        const jd = outcome.item;
-        if (outcome.status === "succeeded") {
-          setJd(jd.jdId, { status: "done", rec: outcome.result ?? null, error: null });
-        } else {
-          setJd(jd.jdId, { status: "failed", rec: null, error: "Pricing failed. Please retry." });
-        }
-      },
-    );
+    await priceAll(failedJds);
   };
 
   // ── Aggregate progress ──────────────────────────────────────────────────────
@@ -216,7 +262,8 @@ export function RecommendationsView({
           markupPct: num(rec.markupPct),
           confidence: rec.confidenceScore,
           prompt: rec.promptName,
-          rationale: rec.explanation,
+          sources: rec.sources?.length ? rec.sources.join("\n") : null,
+          marketFactors: rec.marketFactors?.length ? rec.marketFactors.join("; ") : null,
           status: rec.submissionStatus,
           pricedOn: rec.createdAt ? rec.createdAt.slice(0, 10) : null,
         },

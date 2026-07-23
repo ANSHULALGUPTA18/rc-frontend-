@@ -103,6 +103,7 @@ export function JdWorkshopFlow(): React.ReactElement {
       mandatorySkills: p.mandatorySkills,
       experienceLevel: p.experienceLevel,
       employmentType: p.employmentType,
+      client: p.client,
       detectionSource: p.detectionSource,
     }));
 

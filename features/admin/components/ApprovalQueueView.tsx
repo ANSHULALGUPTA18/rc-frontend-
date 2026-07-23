@@ -26,7 +26,11 @@ interface ApprovalItem {
   markup_pct: string;
   confidence_score: number;
   status: string;
+  /** Legacy prose rationale — only on recommendations priced before AI
+   *  reasoning was removed. Null for new ones. */
   explanation: string | null;
+  /** Model-cited source URLs — sanitized for display, NOT verified. */
+  sources?: string[] | null;
   contributing_signals?: ContributingSignal[];
   submitted_by_name?: string | null;
   submitted_by_email?: string | null;
@@ -557,7 +561,40 @@ export function ApprovalQueueView(): React.ReactElement {
                   </div>
                 </div>
 
-                {/* Pricing Rationale */}
+                {/* Sources the model cited for this rate */}
+                {detailItem.sources && detailItem.sources.length > 0 && (
+                  <div className="mb-4 rounded-lg border border-line bg-blue-50 p-4">
+                    <h3 className="mb-2 text-sm font-bold text-ink">
+                      Sources{" "}
+                      <span className="font-normal text-ink-muted">
+                        (cited by the model, not verified)
+                      </span>
+                    </h3>
+                    <ul className="space-y-1">
+                      {detailItem.sources.map((src) => (
+                        <li key={src} className="truncate text-sm">
+                          {/^https?:\/\//.test(src) ? (
+                            <a
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-700 underline hover:text-blue-900"
+                              title={src}
+                            >
+                              {src}
+                            </a>
+                          ) : (
+                            <span className="text-ink-muted" title={src}>
+                              {src}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Legacy prose rationale — pre-existing recommendations only */}
                 {detailItem.explanation && (
                   <div className="mb-4 rounded-lg border border-line bg-blue-50 p-4">
                     <h3 className="mb-2 text-sm font-bold text-ink">Pricing Rationale</h3>

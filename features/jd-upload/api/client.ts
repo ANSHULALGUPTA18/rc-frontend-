@@ -149,13 +149,11 @@ function mapRecommendation(raw: RawRecommendation): PricingRecommendation {
     confidenceScore: raw.confidence_score,
     status: raw.status,
     submissionStatus: raw.submission_status ?? "draft",
-    contributingSignals: (raw.contributing_signals ?? []).map(
-      (signal): ContributingSignal => ({
-        signalType: signal.signal_type,
-        description: signal.description,
-        weight: signal.weight,
-      }),
-    ),
+    contributingSignals: (raw.contributing_signals ?? []).map((signal): ContributingSignal => ({
+      signalType: signal.signal_type,
+      description: signal.description,
+      weight: signal.weight,
+    })),
     marketDataUnavailable: raw.market_data_unavailable,
     rateCardApplied: raw.rate_card_applied,
     rateCardConstraintViolated: raw.rate_card_constraint_violated,
@@ -308,6 +306,43 @@ export async function priceJd(
   return { jdId: res.jd_id, status: res.status };
 }
 
+/**
+ * Price several JDs that share one prompt config in a single request.
+ *
+ * The backend prices them in one AI call (better cross-role consistency,
+ * far fewer tokens) and falls back to per-position calls for anything it
+ * cannot price. Always resolves with one result per requested jdId —
+ * per-position failures are reported in-band, not thrown.
+ */
+export async function priceJdBatch(
+  jdIds: string[],
+  promptConfig: ResolvedPromptConfig,
+  msal?: MsalTokenContext,
+): Promise<{ jdId: string; status: string; error: string | null }[]> {
+  if (IS_MOCK) {
+    return jdIds.map((jdId) => ({ jdId, status: "pending_review", error: null }));
+  }
+  const res = await apiFetch<{
+    results: { jd_id: string; status: string; error: string | null }[];
+  }>("/v1/jds/price-batch", {
+    method: "POST",
+    body: JSON.stringify({
+      jd_ids: jdIds,
+      prompt_content: promptConfig.promptContent,
+      prompt_name: promptConfig.promptName ?? null,
+      location_override: promptConfig.locationOverride,
+      sector_override: promptConfig.sectorOverride,
+      rate_tiers: promptConfig.rateTiers ?? null,
+    }),
+    msal,
+  });
+  return res.results.map((r) => ({
+    jdId: r.jd_id,
+    status: r.status,
+    error: r.error,
+  }));
+}
+
 export async function getPricingHistory(
   jdId: string,
   msal?: MsalTokenContext,
@@ -328,6 +363,9 @@ export async function getPricingHistory(
       markup_pct: string;
       confidence_score: number;
       explanation: string | null;
+      sources?: string[] | null;
+      key_skills?: string[] | null;
+      market_factors?: string[] | null;
       submission_status: string;
       created_at: string;
       global_rates?: Record<
@@ -360,6 +398,9 @@ export async function getPricingHistory(
     markupPct: v.markup_pct,
     confidenceScore: v.confidence_score,
     explanation: v.explanation,
+    sources: v.sources ?? null,
+    keySkills: v.key_skills ?? null,
+    marketFactors: v.market_factors ?? null,
     submissionStatus: v.submission_status,
     createdAt: v.created_at,
     globalRates: v.global_rates
@@ -558,6 +599,7 @@ export async function confirmPositions(
         mandatory_skills: p.mandatorySkills,
         experience_level: p.experienceLevel,
         employment_type: p.employmentType,
+        client: p.client,
         detection_source: p.detectionSource as string,
       })),
     }),
@@ -641,7 +683,10 @@ export interface PricingExportRow {
   markupPct: number | null;
   confidence: number | null;
   prompt: string | null;
-  rationale: string | null;
+  /** Newline-joined model-cited source URLs (replaces the old rationale). */
+  sources: string | null;
+  /** Semicolon-joined market factors. */
+  marketFactors: string | null;
   status: string | null;
   pricedOn: string | null;
 }
@@ -676,7 +721,8 @@ export async function exportPricingExcel(
       markup_pct: r.markupPct,
       confidence: r.confidence,
       prompt: r.prompt,
-      rationale: r.rationale,
+      sources: r.sources,
+      market_factors: r.marketFactors,
       status: r.status,
       priced_on: r.pricedOn,
     })),

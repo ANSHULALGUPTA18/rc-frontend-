@@ -90,6 +90,17 @@ export async function createPromptTemplate(name: string, content: string): Promi
   };
 }
 
+export async function updatePromptTemplate(
+  id: string,
+  name: string,
+  content: string,
+): Promise<void> {
+  if (typeof window !== "undefined") {
+    const { updatePrompt } = await import("@/lib/prompts/prompt-store");
+    updatePrompt(id, name, content);
+  }
+}
+
 export async function deletePromptTemplate(id: string): Promise<void> {
   if (typeof window !== "undefined") {
     const { deletePrompt } = await import("@/lib/prompts/prompt-store");

@@ -86,3 +86,59 @@ describe("RecommendationCard — cache badge", () => {
     expect(screen.queryByText(/Fresh AI Response/)).not.toBeInTheDocument();
   });
 });
+
+describe("RecommendationCard — structured pricing metadata", () => {
+  const renderWith = (over: Partial<PricingVersion>) =>
+    render(
+      <RecommendationCard
+        fileName="Position 1"
+        status="done"
+        rec={{ ...baseRec, ...over }}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+
+  it("shows key skills, market factors, and model-cited sources", () => {
+    renderWith({
+      keySkills: ["Java", "AWS"],
+      marketFactors: ["NYC premium"],
+      sources: ["https://www.indeed.com/salaries/java"],
+    });
+
+    expect(screen.getByText("Java, AWS")).toBeInTheDocument();
+    expect(screen.getByText("NYC premium")).toBeInTheDocument();
+    // Sources are labeled as model-cited, never presented as verified.
+    expect(screen.getByText(/cited by the model/)).toBeInTheDocument();
+  });
+
+  it("renders http sources as links to the source", () => {
+    renderWith({ sources: ["https://www.indeed.com/salaries/java"] });
+
+    const link = screen.getByRole("link", { name: "https://www.indeed.com/salaries/java" });
+    expect(link).toHaveAttribute("href", "https://www.indeed.com/salaries/java");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("renders a non-URL source as plain text, not a link", () => {
+    renderWith({ sources: ["BLS OEWS May 2025"] });
+
+    expect(screen.getByText("BLS OEWS May 2025")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "BLS OEWS May 2025" })).not.toBeInTheDocument();
+  });
+
+  it("renders no metadata panel when nothing is available", () => {
+    renderWith({ keySkills: null, marketFactors: null, sources: null, explanation: null });
+
+    expect(screen.queryByText("Key Skills")).not.toBeInTheDocument();
+    expect(screen.queryByText(/cited by the model/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Rationale")).not.toBeInTheDocument();
+  });
+
+  it("still shows legacy prose rationale on older recommendations", () => {
+    renderWith({ explanation: "Priced from 2025 market data." });
+
+    expect(screen.getByText("Rationale")).toBeInTheDocument();
+    expect(screen.getByText("Priced from 2025 market data.")).toBeInTheDocument();
+  });
+});

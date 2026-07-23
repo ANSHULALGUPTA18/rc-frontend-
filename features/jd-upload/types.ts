@@ -171,6 +171,9 @@ export interface ConfirmPositionItem {
   mandatorySkills: string[];
   experienceLevel: string | null;
   employmentType: string | null;
+  /** The requesting organization (e.g. "State of Vermont") — carried through
+   *  from smart-upload's document-level detection so pricing can use it. */
+  client: string | null;
   detectionSource: "gemini" | "heading_split" | "vision" | "manual";
 }
 
@@ -201,7 +204,19 @@ export interface PricingVersion {
   billRateHigh: string;
   markupPct: string;
   confidenceScore: number;
+  /**
+   * Legacy prose rationale — only present on recommendations priced before
+   * AI reasoning was removed. Null for all new ones; use the structured
+   * fields below instead.
+   */
   explanation: string | null;
+  /**
+   * Source URLs the model says it used. Sanitized for display but NOT
+   * verified — always label these as model-cited, never as evidence.
+   */
+  sources?: string[] | null;
+  keySkills?: string[] | null;
+  marketFactors?: string[] | null;
   submissionStatus: string;
   createdAt: string;
   /** Extra rate tiers when the pricing model provided them. */

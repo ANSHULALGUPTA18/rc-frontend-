@@ -172,13 +172,65 @@ export function RecommendationCard({
           </div>
         )}
 
-        {/* Explanation */}
-        {rec.explanation && (
-          <div className="rounded-lg border border-line bg-blue-50 p-3">
-            <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
-              Rationale
-            </h4>
-            <p className="text-sm leading-relaxed text-ink-muted">{rec.explanation}</p>
+        {/* Structured pricing metadata (replaces the old prose rationale) */}
+        {(rec.keySkills?.length ||
+          rec.marketFactors?.length ||
+          rec.sources?.length ||
+          rec.explanation) && (
+          <div className="space-y-2 rounded-lg border border-line bg-blue-50 p-3">
+            {rec.keySkills && rec.keySkills.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  Key Skills
+                </h4>
+                <p className="text-sm text-ink-muted">{rec.keySkills.join(", ")}</p>
+              </div>
+            )}
+            {rec.marketFactors && rec.marketFactors.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  Market Factors
+                </h4>
+                <p className="text-sm text-ink-muted">{rec.marketFactors.join("; ")}</p>
+              </div>
+            )}
+            {rec.sources && rec.sources.length > 0 && (
+              <div>
+                <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  Sources <span className="font-normal normal-case">(cited by the model)</span>
+                </h4>
+                <ul className="space-y-0.5">
+                  {rec.sources.map((src) => (
+                    <li key={src} className="truncate text-sm">
+                      {/^https?:\/\//.test(src) ? (
+                        <a
+                          href={src}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-700 underline hover:text-blue-900"
+                          title={src}
+                        >
+                          {src}
+                        </a>
+                      ) : (
+                        <span className="text-ink-muted" title={src}>
+                          {src}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Legacy prose rationale — only on pre-existing recommendations. */}
+            {rec.explanation && (
+              <div>
+                <h4 className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  Rationale
+                </h4>
+                <p className="text-sm leading-relaxed text-ink-muted">{rec.explanation}</p>
+              </div>
+            )}
           </div>
         )}
 
