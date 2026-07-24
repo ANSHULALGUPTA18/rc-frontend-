@@ -258,8 +258,8 @@ export function RecommendationCard({
                   Sources <span className="font-normal normal-case">(cited by the model)</span>
                 </h4>
                 <ul className="space-y-0.5">
-                  {rec.sources.map((src) => (
-                    <li key={src} className="truncate text-sm">
+                  {Array.from(new Set(rec.sources)).map((src, i) => (
+                    <li key={`${src}-${i}`} className="truncate text-sm">
                       {/^https?:\/\//.test(src) ? (
                         <a
                           href={src}
