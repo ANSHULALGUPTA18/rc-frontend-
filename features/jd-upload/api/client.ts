@@ -367,6 +367,15 @@ export async function getPricingHistory(
       key_skills?: string[] | null;
       market_factors?: string[] | null;
       evidence_decision?: string | null;
+      agency_rate?: {
+        available: boolean;
+        searched?: boolean;
+        low: number | null;
+        high: number | null;
+        grade: string | null;
+        decision?: string | null;
+        sources?: string[] | null;
+      } | null;
       submission_status: string;
       created_at: string;
       global_rates?: Record<
@@ -403,6 +412,7 @@ export async function getPricingHistory(
     keySkills: v.key_skills ?? null,
     marketFactors: v.market_factors ?? null,
     evidenceDecision: v.evidence_decision ?? null,
+    agencyRate: v.agency_rate ?? null,
     submissionStatus: v.submission_status,
     createdAt: v.created_at,
     globalRates: v.global_rates
@@ -674,6 +684,9 @@ export interface PricingExportRow {
   skills: string | null;
   payRateLow: number | null;
   payRateHigh: number | null;
+  agencyPayLow?: number | null;
+  agencyPayHigh?: number | null;
+  agencyGrade?: string | null;
   remotePay?: string | null;
   remoteBill?: string | null;
   offshorePay?: string | null;
@@ -712,6 +725,9 @@ export async function exportPricingExcel(
       skills: r.skills,
       pay_rate_low: r.payRateLow,
       pay_rate_high: r.payRateHigh,
+      agency_pay_low: r.agencyPayLow ?? null,
+      agency_pay_high: r.agencyPayHigh ?? null,
+      agency_grade: r.agencyGrade ?? null,
       bill_rate_low: r.billRateLow,
       bill_rate_high: r.billRateHigh,
       remote_pay: r.remotePay ?? null,

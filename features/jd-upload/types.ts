@@ -223,6 +223,21 @@ export interface PricingVersion {
    * thin/wrong-occupation/insufficient. null/undefined on legacy pricing.
    */
   evidenceDecision?: string | null;
+  /**
+   * Dual-rate: Agency Published Pay Rate (public-sector) — a SEPARATE column
+   * from the contractor pay rate above, never blended. null for private-sector /
+   * legacy / when the agency search did not run. `searched: true, available:
+   * false` means the agency search ran but found insufficient evidence.
+   */
+  agencyRate?: {
+    available: boolean;
+    searched?: boolean;
+    low: number | null;
+    high: number | null;
+    grade: string | null;
+    decision?: string | null;
+    sources?: string[] | null;
+  } | null;
   submissionStatus: string;
   createdAt: string;
   /** Extra rate tiers when the pricing model provided them. */

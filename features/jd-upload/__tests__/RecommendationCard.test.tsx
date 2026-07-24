@@ -171,3 +171,53 @@ describe("RecommendationCard — evidence human-review", () => {
     expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
   });
 });
+
+describe("RecommendationCard — dual rate (agency + contractor)", () => {
+  const renderWith = (over: Partial<PricingVersion>) =>
+    render(
+      <RecommendationCard
+        fileName="Systems Engineer I"
+        status="done"
+        rec={{ ...baseRec, ...over }}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+
+  it("shows both columns when the agency rate is available", () => {
+    renderWith({
+      payRateLow: "48.00",
+      payRateHigh: "73.00",
+      agencyRate: {
+        available: true,
+        searched: true,
+        low: 33,
+        high: 49,
+        grade: "C02",
+        decision: "recommend",
+        sources: [],
+      },
+    });
+    expect(screen.getByText(/Agency Published Pay Rate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Grade C02/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$33\.00 – \$49\.00\/hr/)).toBeInTheDocument();
+    // Contractor column relabeled + shown separately.
+    expect(screen.getByText(/Contractor Market Pay Rate/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$48\.00 – \$73\.00\/hr/)).toBeInTheDocument();
+  });
+
+  it("marks agency unavailable when searched but insufficient", () => {
+    renderWith({
+      agencyRate: { available: false, searched: true, low: null, high: null, grade: null },
+    });
+    expect(screen.getByText(/Agency Published Pay Rate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Unavailable — insufficient agency evidence/i)).toBeInTheDocument();
+  });
+
+  it("hides the agency block entirely for private/legacy (agencyRate null)", () => {
+    renderWith({ agencyRate: null });
+    expect(screen.queryByText(/Agency Published Pay Rate/i)).not.toBeInTheDocument();
+    // Contractor keeps the plain "Pay Rate" label when there's no agency column.
+    expect(screen.getByText(/^Pay Rate$/i)).toBeInTheDocument();
+  });
+});

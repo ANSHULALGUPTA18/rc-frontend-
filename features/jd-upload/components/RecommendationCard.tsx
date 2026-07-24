@@ -107,10 +107,42 @@ export function RecommendationCard({
             </p>
           </div>
         )}
-        {/* Rate grid */}
+
+        {/* Agency Published Pay Rate — public-sector, SEPARATE from contractor */}
+        {rec.agencyRate && (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+              Agency Published Pay Rate
+              {rec.agencyRate.grade && (
+                <span className="ml-2 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-800">
+                  Grade {rec.agencyRate.grade}
+                </span>
+              )}
+            </p>
+            {rec.agencyRate.available &&
+            rec.agencyRate.low != null &&
+            rec.agencyRate.high != null ? (
+              <p className="mt-1 text-base font-bold text-ink">
+                ${rec.agencyRate.low.toFixed(2)} – ${rec.agencyRate.high.toFixed(2)}/hr
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-ink-muted">
+                Unavailable — insufficient agency evidence
+              </p>
+            )}
+            <p className="mt-0.5 text-[11px] text-indigo-600">
+              The client agency&apos;s own published pay grade — kept separate from the contractor
+              market rate.
+            </p>
+          </div>
+        )}
+
+        {/* Rate grid — Contractor Market Pay Rate (the existing pay_rate) */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-line bg-surface-muted p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Pay Rate</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              {rec.agencyRate ? "Contractor Market Pay Rate" : "Pay Rate"}
+            </p>
             <p className="mt-1 text-base font-bold text-ink">
               {fmt(rec.payRateLow)} – {fmt(rec.payRateHigh)}/hr
             </p>
