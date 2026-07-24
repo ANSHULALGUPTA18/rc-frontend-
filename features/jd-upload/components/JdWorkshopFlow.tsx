@@ -122,6 +122,9 @@ export function JdWorkshopFlow(): React.ReactElement {
           : entry.file.name,
         jdId: r.jdId,
         extractedFields: r.extractedFields,
+        // Client isn't part of extractedFields — keep it from detection so
+        // manual labor categories added to this PDF can inherit it.
+        client: detected?.client ?? item?.client ?? null,
         sourceFileId: entry.id,
         sourceFileName: entry.file.name,
         detectionSource: detected?.detectionSource,
@@ -205,7 +208,9 @@ export function JdWorkshopFlow(): React.ReactElement {
     extractedJds.filter((jd) => (jd.sourceFileId ?? jd.fileId) === fileId);
 
   /** Client/contract context for a PDF — derived from ITS positions only. */
-  const _contextOfPdf = (fileId: string): { location: string | null; sector: string | null } =>
+  const _contextOfPdf = (
+    fileId: string,
+  ): { location: string | null; sector: string | null; client: string | null } =>
     deriveContextDefaults(_positionsOfPdf(fileId));
 
   const _saveManual = (

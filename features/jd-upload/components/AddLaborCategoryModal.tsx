@@ -13,7 +13,7 @@ interface AddLaborCategoryModalProps {
   /** Whether we're editing (changes the heading + button label). */
   editing?: boolean;
   /** Context inherited from the uploaded document, shown as a hint. */
-  inheritedContext?: { location: string | null; sector: string | null };
+  inheritedContext?: { location: string | null; sector: string | null; client: string | null };
   onCancel: () => void;
   onSave: (form: ManualPositionForm) => void;
 }
@@ -70,6 +70,7 @@ export function AddLaborCategoryModal({
   const canSave = form.laborCategory.trim().length > 0;
 
   const contextHint = [
+    inheritedContext?.client ? `Client: ${inheritedContext.client}` : null,
     inheritedContext?.location ? `Location: ${inheritedContext.location}` : null,
     inheritedContext?.sector ? `Sector: ${inheritedContext.sector}` : null,
   ]
@@ -120,6 +121,20 @@ export function AddLaborCategoryModal({
             {!form.laborCategory.trim() && (
               <p className="text-xs text-red-500">Labor Category is required</p>
             )}
+          </Field>
+
+          <Field label="Client">
+            <input
+              type="text"
+              value={form.client}
+              onChange={(e) => patch({ client: e.target.value })}
+              placeholder={inheritedContext?.client ?? "Enter client / requesting organization"}
+              className={inputCls}
+            />
+            <p className="text-xs text-ink-subtle">
+              Leave blank to inherit from the uploaded document
+              {inheritedContext?.client ? ` (${inheritedContext.client})` : ""}.
+            </p>
           </Field>
 
           <div className="grid grid-cols-2 gap-4">

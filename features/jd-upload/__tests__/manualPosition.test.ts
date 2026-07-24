@@ -12,11 +12,16 @@ function form(overrides: Partial<ManualPositionForm> = {}): ManualPositionForm {
   return { ...emptyManualForm(), laborCategory: "Project Manager", ...overrides };
 }
 
-function extracted(location: string | null, sector: string | null): SubmittedJd {
+function extracted(
+  location: string | null,
+  sector: string | null,
+  client: string | null = null,
+): SubmittedJd {
   return {
     fileId: crypto.randomUUID(),
     fileName: "IT Specialist",
     jdId: crypto.randomUUID(),
+    client,
     extractedFields: {
       jobTitle: "IT Specialist",
       experienceRequired: "1+ years",
@@ -41,21 +46,34 @@ describe("parseSkillsInput", () => {
 });
 
 describe("deriveContextDefaults", () => {
-  it("inherits the first non-empty location and sector from extracted positions", () => {
-    const jds = [extracted(null, null), extracted("Niles, Illinois", "Public Sector")];
+  it("inherits the first non-empty location, sector, and client from extracted positions", () => {
+    const jds = [
+      extracted(null, null, null),
+      extracted("Oceanside, CA", "Public Sector", "North County Transit District (NCTD)"),
+    ];
     expect(deriveContextDefaults(jds)).toEqual({
-      location: "Niles, Illinois",
+      location: "Oceanside, CA",
       sector: "Public Sector",
+      client: "North County Transit District (NCTD)",
     });
   });
 
   it("returns nulls when there are no extracted positions", () => {
-    expect(deriveContextDefaults([])).toEqual({ location: null, sector: null });
+    expect(deriveContextDefaults([])).toEqual({ location: null, sector: null, client: null });
+  });
+
+  it("does not invent a client when none of the extracted positions carry one", () => {
+    const jds = [extracted("Oceanside, CA", "Public Sector", null)];
+    expect(deriveContextDefaults(jds).client).toBeNull();
   });
 });
 
 describe("buildManualConfirmItem", () => {
-  const defaults = { location: "Niles, Illinois", sector: "Public Sector" };
+  const defaults = {
+    location: "Oceanside, CA",
+    sector: "Public Sector",
+    client: "North County Transit District (NCTD)",
+  };
 
   it("maps the form to a confirm-positions item with source=manual", () => {
     const item = buildManualConfirmItem(
@@ -71,15 +89,35 @@ describe("buildManualConfirmItem", () => {
     expect(item.employmentType).toBe("Contract");
   });
 
-  it("inherits location and sector from the document context when blank", () => {
+  it("inherits location, sector, and client from the document context when blank", () => {
     const item = buildManualConfirmItem("d", form(), defaults);
-    expect(item.location).toBe("Niles, Illinois"); // inherited
+    expect(item.location).toBe("Oceanside, CA"); // inherited
     expect(item.sector).toBe("Public Sector"); // sector always inherited
+    expect(item.client).toBe("North County Transit District (NCTD)"); // inherited client
   });
 
   it("prefers a typed location over the inherited one", () => {
     const item = buildManualConfirmItem("d", form({ location: "Austin, TX" }), defaults);
     expect(item.location).toBe("Austin, TX");
+  });
+
+  it("prefers a typed client override over the inherited one", () => {
+    const item = buildManualConfirmItem("d", form({ client: "City of Austin" }), defaults);
+    expect(item.client).toBe("City of Austin");
+  });
+
+  it("leaves client null when neither the form nor the context provides one", () => {
+    const item = buildManualConfirmItem("d", form(), {
+      location: null,
+      sector: null,
+      client: null,
+    });
+    expect(item.client).toBeNull();
+  });
+
+  it("includes the client line in the synthesized raw_text when present", () => {
+    const text = buildManualRawText(form({ client: "North County Transit District (NCTD)" }));
+    expect(text).toContain("Client: North County Transit District (NCTD)");
   });
 
   it("synthesizes a readable raw_text carrying the prose fields", () => {

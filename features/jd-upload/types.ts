@@ -33,6 +33,10 @@ export interface SubmittedJd {
   fileName: string;
   jdId: string;
   extractedFields: ExtractedFields;
+  /** The requesting organization (e.g. "North County Transit District") carried
+   *  from smart-upload's document-level detection. Not part of ExtractedFields,
+   *  so it's held here so manual labor categories can inherit it. */
+  client?: string | null;
   /** Id of the source PDF this position was extracted from (batch grouping). */
   sourceFileId?: string;
   /** Original filename of the source PDF (batch grouping). */
@@ -52,6 +56,9 @@ export interface SubmittedJd {
 export interface ManualPositionForm {
   /** Labor Category — the only required field. Maps to the position title. */
   laborCategory: string;
+  /** Requesting organization. Blank inherits the source PDF's client; a typed
+   *  value overrides it. */
+  client: string;
   location: string;
   experience: string;
   education: string;

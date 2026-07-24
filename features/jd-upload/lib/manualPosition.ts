@@ -17,6 +17,7 @@ import type {
 export function emptyManualForm(): ManualPositionForm {
   return {
     laborCategory: "",
+    client: "",
     location: "",
     experience: "",
     education: "",
@@ -43,6 +44,7 @@ export function parseSkillsInput(raw: string): string[] {
  */
 export function buildManualRawText(form: ManualPositionForm): string {
   const parts: string[] = [`Labor Category: ${form.laborCategory.trim()}`];
+  if (form.client.trim()) parts.push(`Client: ${form.client.trim()}`);
   if (form.location.trim()) parts.push(`Location: ${form.location.trim()}`);
   if (form.experience.trim()) parts.push(`Experience: ${form.experience.trim()}`);
   if (form.education.trim()) parts.push(`Education: ${form.education.trim()}`);
@@ -58,17 +60,21 @@ export function buildManualRawText(form: ManualPositionForm): string {
 export interface ManualContextDefaults {
   location: string | null;
   sector: string | null;
+  client: string | null;
 }
 
 /**
  * Derive the client/contract context to inherit for a manual position from the
- * already-extracted positions (first non-empty location/sector wins).
+ * already-extracted positions (first non-empty location/sector/client wins).
+ * Callers pass only the positions of the source PDF, so client is inherited
+ * from that specific parent card — never a hardcoded agency name.
  */
 export function deriveContextDefaults(extracted: SubmittedJd[]): ManualContextDefaults {
   const location =
     extracted.find((j) => j.extractedFields.location)?.extractedFields.location ?? null;
   const sector = extracted.find((j) => j.extractedFields.sector)?.extractedFields.sector ?? null;
-  return { location, sector };
+  const client = extracted.find((j) => j.client)?.client ?? null;
+  return { location, sector, client };
 }
 
 /** Build the confirm-positions item for a manual labor category. */
@@ -88,11 +94,10 @@ export function buildManualConfirmItem(
     mandatorySkills: [],
     experienceLevel: form.experience.trim() || null,
     employmentType: form.employmentType.trim() || null,
-    // The requesting organization isn't shown in the extracted-fields
-    // review UI (SubmittedJd.extractedFields has no client), so there's
-    // nothing to inherit here — manual positions price without it, same
-    // as today.
-    client: null,
+    // Inherit the source PDF's client (carried on SubmittedJd.client) unless
+    // the recruiter typed an override. This lets the agency-published-rate
+    // search run for public-sector manual labor categories.
+    client: form.client.trim() || defaults.client,
     detectionSource: "manual",
   };
 }

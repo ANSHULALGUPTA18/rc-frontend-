@@ -207,7 +207,9 @@ export function ExtractionResults({
   // Manual drafts + inherited context for a given PDF.
   const draftsForFile = (fileId: string): ManualPositionDraft[] =>
     manualDrafts.filter((d) => d.sourceFileId === fileId);
-  const contextForFile = (fileId: string): { location: string | null; sector: string | null } =>
+  const contextForFile = (
+    fileId: string,
+  ): { location: string | null; sector: string | null; client: string | null } =>
     deriveContextDefaults(positionsForFile(submittedJds, fileId));
 
   const toggle = (fileId: string): void =>
