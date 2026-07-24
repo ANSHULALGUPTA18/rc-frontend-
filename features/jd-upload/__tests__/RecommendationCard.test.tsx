@@ -142,3 +142,32 @@ describe("RecommendationCard — structured pricing metadata", () => {
     expect(screen.getByText("Priced from 2025 market data.")).toBeInTheDocument();
   });
 });
+
+describe("RecommendationCard — evidence human-review", () => {
+  const renderWith = (over: Partial<PricingVersion>) =>
+    render(
+      <RecommendationCard
+        fileName="Position 1"
+        status="done"
+        rec={{ ...baseRec, ...over }}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+
+  it("shows a needs-human-review banner when evidenceDecision is human_review", () => {
+    renderWith({ evidenceDecision: "human_review" });
+    expect(screen.getByText(/Needs human review/i)).toBeInTheDocument();
+    expect(screen.getByText(/advisory starting point/i)).toBeInTheDocument();
+  });
+
+  it("does not show the banner when evidenceDecision is recommend", () => {
+    renderWith({ evidenceDecision: "recommend" });
+    expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show the banner on legacy recommendations (no evidenceDecision)", () => {
+    renderWith({ evidenceDecision: null });
+    expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
+  });
+});

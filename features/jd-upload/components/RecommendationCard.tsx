@@ -83,6 +83,10 @@ export function RecommendationCard({
   const isApproved = rec.submissionStatus === "approved";
   const isRejected = rec.submissionStatus === "rejected";
   const isPending = rec.submissionStatus === "pending_approval" || approvalState === "submitted";
+  // Evidence pipeline (UAT): this rate needs a human to review it before use —
+  // evidence was thin, wrong-occupation, or insufficient. The range shown is
+  // advisory, not a confident recommendation.
+  const needsReview = rec.evidenceDecision === "human_review";
 
   return (
     <Card>
@@ -94,6 +98,15 @@ export function RecommendationCard({
         {rec.promptName && <p className="text-xs text-ink-muted">Prompt: {rec.promptName}</p>}
       </CardHeader>
       <CardContent className="space-y-4">
+        {needsReview && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-800">⚠ Needs human review</p>
+            <p className="mt-0.5 text-xs text-amber-700">
+              Evidence was thin, wrong-occupation, or insufficient. The rate below is an advisory
+              starting point — verify before using it.
+            </p>
+          </div>
+        )}
         {/* Rate grid */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-line bg-surface-muted p-3">

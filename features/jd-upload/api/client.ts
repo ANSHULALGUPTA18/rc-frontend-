@@ -366,6 +366,7 @@ export async function getPricingHistory(
       sources?: string[] | null;
       key_skills?: string[] | null;
       market_factors?: string[] | null;
+      evidence_decision?: string | null;
       submission_status: string;
       created_at: string;
       global_rates?: Record<
@@ -401,6 +402,7 @@ export async function getPricingHistory(
     sources: v.sources ?? null,
     keySkills: v.key_skills ?? null,
     marketFactors: v.market_factors ?? null,
+    evidenceDecision: v.evidence_decision ?? null,
     submissionStatus: v.submission_status,
     createdAt: v.created_at,
     globalRates: v.global_rates

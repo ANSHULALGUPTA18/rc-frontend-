@@ -217,6 +217,12 @@ export interface PricingVersion {
   sources?: string[] | null;
   keySkills?: string[] | null;
   marketFactors?: string[] | null;
+  /**
+   * Contractor pay-rate evidence pipeline decision (UAT): "recommend" when
+   * strong matched evidence supports the rate, "human_review" when evidence is
+   * thin/wrong-occupation/insufficient. null/undefined on legacy pricing.
+   */
+  evidenceDecision?: string | null;
   submissionStatus: string;
   createdAt: string;
   /** Extra rate tiers when the pricing model provided them. */
