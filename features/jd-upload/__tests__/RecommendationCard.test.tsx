@@ -221,3 +221,45 @@ describe("RecommendationCard — dual rate (agency + contractor)", () => {
     expect(screen.getByText(/^Pay Rate$/i)).toBeInTheDocument();
   });
 });
+
+describe("RecommendationCard — contractor unavailable ($0 abstention)", () => {
+  const renderWith = (over: Partial<PricingVersion>) =>
+    render(
+      <RecommendationCard
+        fileName="X"
+        status="done"
+        rec={{ ...baseRec, ...over }}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+
+  it("shows 'Unavailable' instead of $0.00 when contractor pay is zero", () => {
+    renderWith({
+      payRateLow: "0.00",
+      payRateHigh: "0.00",
+      billRateLow: "0.00",
+      billRateHigh: "0.00",
+    });
+    expect(screen.getByText(/Unavailable — insufficient market evidence/i)).toBeInTheDocument();
+    expect(screen.queryByText(/\$0\.00/)).not.toBeInTheDocument();
+  });
+
+  it("still shows the agency column when contractor is unavailable", () => {
+    renderWith({
+      payRateLow: "0.00",
+      payRateHigh: "0.00",
+      agencyRate: {
+        available: true,
+        searched: true,
+        low: 22,
+        high: 33,
+        grade: "B02",
+        decision: "recommend",
+        sources: [],
+      },
+    });
+    expect(screen.getByText(/Unavailable — insufficient market evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$22\.00 – \$33\.00\/hr/)).toBeInTheDocument();
+  });
+});

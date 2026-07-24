@@ -87,6 +87,9 @@ export function RecommendationCard({
   // evidence was thin, wrong-occupation, or insufficient. The range shown is
   // advisory, not a confident recommendation.
   const needsReview = rec.evidenceDecision === "human_review";
+  // Evidence pipeline abstained on the contractor market rate (no usable
+  // evidence) → it persisted 0/0. Show "unavailable" instead of "$0.00".
+  const contractorUnavailable = parseFloat(rec.payRateLow) <= 0 && parseFloat(rec.payRateHigh) <= 0;
 
   return (
     <Card>
@@ -143,17 +146,27 @@ export function RecommendationCard({
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
               {rec.agencyRate ? "Contractor Market Pay Rate" : "Pay Rate"}
             </p>
-            <p className="mt-1 text-base font-bold text-ink">
-              {fmt(rec.payRateLow)} – {fmt(rec.payRateHigh)}/hr
-            </p>
+            {contractorUnavailable ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                Unavailable — insufficient market evidence
+              </p>
+            ) : (
+              <p className="mt-1 text-base font-bold text-ink">
+                {fmt(rec.payRateLow)} – {fmt(rec.payRateHigh)}/hr
+              </p>
+            )}
           </div>
           <div className="rounded-lg border border-line bg-surface-muted p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
               Bill Rate
             </p>
-            <p className="mt-1 text-base font-bold text-ink">
-              {fmt(rec.billRateLow)} – {fmt(rec.billRateHigh)}/hr
-            </p>
+            {contractorUnavailable ? (
+              <p className="mt-1 text-sm text-ink-muted">—</p>
+            ) : (
+              <p className="mt-1 text-base font-bold text-ink">
+                {fmt(rec.billRateLow)} – {fmt(rec.billRateHigh)}/hr
+              </p>
+            )}
           </div>
           <div className="rounded-lg border border-line bg-surface-muted p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
