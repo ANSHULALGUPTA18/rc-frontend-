@@ -146,6 +146,8 @@ describe("priceJdBatch", () => {
       prompt_name: "Prompt_1",
       location_override: "Montgomery County, MD",
       sector_override: "Public Sector",
+      // Sent on every request; null when the recruiter left it blank.
+      client_override: null,
       rate_tiers: ["remote"],
     });
   });

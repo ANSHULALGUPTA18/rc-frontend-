@@ -93,6 +93,10 @@ export interface ResolvedPromptConfig {
   locationOverride: string | null;
   /** Recruiter-entered sector override; null if left blank. */
   sectorOverride: string | null;
+  /** Recruiter-entered client/agency override; null if left blank. A document
+   *  often names no client, and the client drives the public-sector agency
+   *  and contract-history research. */
+  clientOverride?: string | null;
   /** Extra rate tiers to request: "remote" | "nearshore" | "offshore". */
   rateTiers?: RateTierId[];
 }

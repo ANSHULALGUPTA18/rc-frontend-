@@ -42,6 +42,9 @@ interface FileConfig {
   templateOverride: string | null;
   location: string;
   sector: string;
+  /** Client/agency. Optional — many documents name no client, but supplying it
+   *  enables the public-sector agency and contract-history research. */
+  client: string;
   previewEditing: boolean;
 }
 
@@ -52,6 +55,7 @@ const defaultConfig = (): FileConfig => ({
   templateOverride: null,
   location: "",
   sector: "",
+  client: "",
   previewEditing: false,
 });
 
@@ -187,6 +191,7 @@ export function PromptSelectionView({
               templateOverride: !isCustom && isEdited ? saved.promptContent : null,
               location: saved.locationOverride ?? jd?.extractedFields?.location ?? "",
               sector: saved.sectorOverride ?? jd?.extractedFields?.sector ?? "",
+              client: saved.clientOverride ?? jd?.client ?? "",
             },
           ];
         }
@@ -196,6 +201,7 @@ export function PromptSelectionView({
             ...defaultConfig(),
             location: jd?.extractedFields?.location ?? "",
             sector: jd?.extractedFields?.sector ?? "",
+            client: jd?.client ?? "",
           },
         ];
       }),
@@ -518,6 +524,23 @@ export function PromptSelectionView({
                       )}
                     </div>
                   </div>
+                  <div className="mt-4 space-y-1.5">
+                    <label className="block text-sm font-medium text-ink">
+                      Client / Agency{" "}
+                      <span className="font-normal text-ink-subtle">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={cfg.client}
+                      onChange={(e) => patchConfig(selectedItem.id, { client: e.target.value })}
+                      placeholder="e.g. Houston Housing Authority"
+                      className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-sidebar-active focus:outline-none focus:ring-1 focus:ring-sidebar-active"
+                    />
+                    <p className="text-xs text-ink-subtle">
+                      Naming the client enables the agency published pay rate and
+                      contract-history research for public-sector roles.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -590,6 +613,7 @@ export function PromptSelectionView({
                               : (tpl?.name ?? null),
                         locationOverride: c.location.trim() || null,
                         sectorOverride: c.sector.trim() || null,
+                        clientOverride: c.client.trim() || null,
                         rateTiers: selectedTiers,
                       };
                     }
