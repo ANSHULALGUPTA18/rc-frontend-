@@ -155,20 +155,28 @@ describe("RecommendationCard — evidence human-review", () => {
       />,
     );
 
-  it("shows a needs-human-review banner when evidenceDecision is human_review", () => {
+  // The banner was removed at the business team's request: it fired on roughly
+  // half of all rows, so it read as noise rather than a signal worth acting on.
+  it("never shows a needs-human-review banner, whatever the decision", () => {
+    for (const decision of ["human_review", "recommend", null]) {
+      const { unmount } = render(
+        <RecommendationCard
+          fileName="Position 1"
+          status="done"
+          rec={{ ...baseRec, evidenceDecision: decision }}
+          error={null}
+          onRetry={() => {}}
+        />,
+      );
+      expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/advisory starting point/i)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("still renders the rate when the decision is human_review", () => {
     renderWith({ evidenceDecision: "human_review" });
-    expect(screen.getByText(/Needs human review/i)).toBeInTheDocument();
-    expect(screen.getByText(/advisory starting point/i)).toBeInTheDocument();
-  });
-
-  it("does not show the banner when evidenceDecision is recommend", () => {
-    renderWith({ evidenceDecision: "recommend" });
-    expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
-  });
-
-  it("does not show the banner on legacy recommendations (no evidenceDecision)", () => {
-    renderWith({ evidenceDecision: null });
-    expect(screen.queryByText(/Needs human review/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/55\.00/)).toBeInTheDocument();
   });
 });
 

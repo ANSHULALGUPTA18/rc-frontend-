@@ -83,10 +83,12 @@ export function RecommendationCard({
   const isApproved = rec.submissionStatus === "approved";
   const isRejected = rec.submissionStatus === "rejected";
   const isPending = rec.submissionStatus === "pending_approval" || approvalState === "submitted";
-  // Evidence pipeline (UAT): this rate needs a human to review it before use —
-  // evidence was thin, wrong-occupation, or insufficient. The range shown is
-  // advisory, not a confident recommendation.
-  const needsReview = rec.evidenceDecision === "human_review";
+  // The "needs human review" banner was removed at the business team's request:
+  // it fired on roughly half of all rows, so it read as noise rather than as a
+  // signal worth acting on. `evidenceDecision` is still returned by the API and
+  // persisted, so the distinction remains available in the export and can be
+  // surfaced again in a lower-key form (e.g. a confidence chip) if wanted.
+  //
   // Evidence pipeline abstained on the contractor market rate (no usable
   // evidence) → it persisted 0/0. Show "unavailable" instead of "$0.00".
   const contractorUnavailable = parseFloat(rec.payRateLow) <= 0 && parseFloat(rec.payRateHigh) <= 0;
@@ -101,16 +103,6 @@ export function RecommendationCard({
         {rec.promptName && <p className="text-xs text-ink-muted">Prompt: {rec.promptName}</p>}
       </CardHeader>
       <CardContent className="space-y-4">
-        {needsReview && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-800">⚠ Needs human review</p>
-            <p className="mt-0.5 text-xs text-amber-700">
-              Evidence was thin, wrong-occupation, or insufficient. The rate below is an advisory
-              starting point — verify before using it.
-            </p>
-          </div>
-        )}
-
         {/* Agency Published Pay Rate — public-sector, SEPARATE from contractor */}
         {rec.agencyRate && (
           <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
