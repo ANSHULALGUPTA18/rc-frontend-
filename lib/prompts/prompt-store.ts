@@ -6,13 +6,49 @@ export interface StoredPrompt {
   content: string;
 }
 
-const STORAGE_KEY = "rc_pricing_prompts";
+// Versioned: prompts are cached in localStorage, so a browser that has ever
+// opened Prompt Selection keeps its copy forever and never sees an updated
+// default. Bumping the key retires the stale copy — without this, changing
+// DEFAULT_PROMPTS has no effect for any existing user.
+const STORAGE_KEY = "rc_pricing_prompts_v2";
+
+/**
+ * The default pricing instruction, shared with the mock prompt options so the
+ * two cannot drift apart.
+ *
+ * The previous default — "Please provide the public sector hourly pay rate of
+ * this position" — anchored on government EMPLOYEE pay scales, the opposite of
+ * what the contractor engine estimates. It pulled salary evidence instead of
+ * contractor evidence and under-priced every role, so recruiters retyped around
+ * it on every run. This wording produced the best measured run.
+ */
+export const CONTRACT_STAFFING_PAY_PROMPT = `Provide the competitive hourly PAY RATE for a temporary/contract staffing worker performing this role.
+
+The recommendation should represent what a staffing agency would pay the worker, not what the agency bills the client.
+
+Focus on market pay for:
+• W2 contract employees
+• 1099 independent contractors
+• C2C contractors (where applicable)
+
+Research comparable staffing positions at the same kind of employer, historical staffing contracts for that employer where available, and current staffing market data for the location.
+
+Recommend the rate that would realistically attract qualified candidates while remaining competitive for a staffing proposal.
+
+Do NOT calculate:
+• Bill Rate
+• Agency Markup
+• Overtime
+• Burden
+• Fees
+
+Return only the recommended hourly PAY RATE.`;
 
 const DEFAULT_PROMPTS: StoredPrompt[] = [
   {
     id: "1",
-    name: "Public Sector Rate",
-    content: "Please provide the public sector hourly pay rate of this position.",
+    name: "Contract Staffing Pay Rate",
+    content: CONTRACT_STAFFING_PAY_PROMPT,
   },
   {
     id: "2",

@@ -34,6 +34,7 @@ import type {
   SmartUploadResponse,
   SubmittedJd,
 } from "@/features/jd-upload/types";
+import { CONTRACT_STAFFING_PAY_PROMPT } from "@/lib/prompts/prompt-store";
 
 // ─── Cache metadata mapping (shared by smart-upload + pricing-history) ────────
 
@@ -120,8 +121,8 @@ export interface PromptTemplateOption {
 const MOCK_PROMPT_OPTIONS: PromptTemplateOption[] = [
   {
     id: "1",
-    name: "Prompt_1",
-    content: "Please provide the public sector hourly pay rate of this position.",
+    name: "Contract Staffing Pay Rate",
+    content: CONTRACT_STAFFING_PAY_PROMPT,
   },
   {
     id: "2",
