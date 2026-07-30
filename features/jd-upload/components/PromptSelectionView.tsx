@@ -228,7 +228,12 @@ export function PromptSelectionView({
     setConfigs((prev) => {
       const next = { ...prev };
       for (const item of queueItems) {
-        next[item.id] = { ...next[item.id], location: source.location, sector: source.sector };
+        next[item.id] = {
+          ...next[item.id],
+          location: source.location,
+          sector: source.sector,
+          client: source.client,
+        };
       }
       return next;
     });
@@ -471,7 +476,7 @@ export function PromptSelectionView({
                 <div className="mt-5 space-y-3">
                   {isMulti && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-ink">Location &amp; Sector</span>
+                      <span className="text-sm font-medium text-ink">Location, Sector &amp; Client</span>
                       <button
                         type="button"
                         onClick={() => setConfirmApply("location-sector")}
@@ -633,12 +638,12 @@ export function PromptSelectionView({
         title={
           confirmApply === "prompt"
             ? "Apply prompt to all positions?"
-            : "Apply location & sector to all positions?"
+            : "Apply location, sector & client to all positions?"
         }
         message={
           confirmApply === "prompt"
             ? "The prompt configuration currently selected will be applied to every position in the queue. This will overwrite any prompt settings already configured for the other positions. Do you want to continue?"
-            : "The location and sector entered for this position will be applied to every position in the queue. This will overwrite the location and sector already set for the other positions. Do you want to continue?"
+            : "The location, sector and client entered for this position will be applied to every position in the queue. This will overwrite the values already set for the other positions. Do you want to continue?"
         }
         confirmLabel="Apply to all"
         cancelLabel="Cancel"
