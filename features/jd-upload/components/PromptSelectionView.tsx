@@ -13,11 +13,36 @@ import { getPromptOptions } from "@/features/jd-upload/api/client";
 import type { PromptTemplateOption } from "@/features/jd-upload/api/client";
 import type { RateTierId, ResolvedPromptConfig, SubmittedJd } from "@/features/jd-upload/types";
 
+// The default template is the one that ships the engine's intended behaviour:
+// it anchors on what the WORKER is paid on a contract placement. The previous
+// default ("public sector hourly pay rate") anchored on government EMPLOYEE pay
+// scales, which pulled salary evidence instead of contractor evidence and
+// under-priced every role — recruiters were retyping around it on every run.
 const PLACEHOLDER_TEMPLATES: PromptTemplateOption[] = [
   {
     id: "1",
-    name: "Public Sector Rate",
-    content: "Please provide the public sector hourly pay rate of this position.",
+    name: "Contract Staffing Pay Rate",
+    content: `Provide the competitive hourly PAY RATE for a temporary/contract staffing worker performing this role.
+
+The recommendation should represent what a staffing agency would pay the worker, not what the agency bills the client.
+
+Focus on market pay for:
+• W2 contract employees
+• 1099 independent contractors
+• C2C contractors (where applicable)
+
+Research comparable staffing positions at the same kind of employer, historical staffing contracts for that employer where available, and current staffing market data for the location.
+
+Recommend the rate that would realistically attract qualified candidates while remaining competitive for a staffing proposal.
+
+Do NOT calculate:
+• Bill Rate
+• Agency Markup
+• Overtime
+• Burden
+• Fees
+
+Return only the recommended hourly PAY RATE.`,
   },
   {
     id: "2",
